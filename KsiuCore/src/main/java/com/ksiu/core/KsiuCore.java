@@ -12,9 +12,16 @@ import java.lang.reflect.Field;
 
 public final class KsiuCore extends JavaPlugin
 {
+    private static KsiuCore instance;
+
+    public static KsiuCore getInstance()
+    {
+        return instance;
+    }
+
     private KsiuCommandRouter _commandRouter;
 
-    public final String getVersion()
+    public static String getVersion()
     {
         return "1.0.0";
     }
@@ -22,8 +29,8 @@ public final class KsiuCore extends JavaPlugin
     @Override
     public void onEnable()
     {
+        instance = this;
         getLogger().info("=== KsiuCore Kernel 가동 ===");
-
         _commandRouter = new KsiuCommandRouter(this);
         Class<?> serverClass = getServer().getClass();
         try
