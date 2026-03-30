@@ -1,6 +1,7 @@
 package com.ksiu.core.commands;
 
 import com.ksiu.core.KsiuCore;
+import com.ksiu.core.commands.interfaces.ICommandBundle;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandSender;
@@ -61,11 +62,12 @@ public final class KsiuCommandRouter extends BukkitCommand
         if (args.length == 0)
         {
             sender.sendMessage(KsiuCore.getPrefixTextBuilder()
-                    .append(Component.text("현재 로드된 모듈 목록:").color(NamedTextColor.WHITE))
+                    .append(Component.text("현재 로드된 모듈 목록:", NamedTextColor.WHITE))
                     .build());
             for (String moduleName : _commandBundles.keySet())
             {
-                sender.sendMessage(Component.text("- " + moduleName, NamedTextColor.WHITE));
+                sender.sendMessage(Component.text(" > ", NamedTextColor.AQUA)
+                        .append(Component.text(moduleName, NamedTextColor.YELLOW)));
             }
             return true;
         }
