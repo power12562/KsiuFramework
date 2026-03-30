@@ -5,7 +5,9 @@ import com.ksiu.core.commands.interfaces.ICommand;
 import com.ksiu.core.commands.interfaces.ICommandBundle;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.util.StringUtil;
 
 import java.util.*;
@@ -15,6 +17,11 @@ public final class KsiuCommandList implements ICommandBundle
     private final Map<String, ICommand> _commands = new HashMap<>();
     private final String _moduleName;
 
+    public final String getModuleName()
+    {
+        return _moduleName;
+    }
+
     public KsiuCommandList(String moduleName)
     {
         _moduleName = moduleName;
@@ -22,7 +29,11 @@ public final class KsiuCommandList implements ICommandBundle
 
     public void put(ICommand command)
     {
-        _commands.put(command.getName().toLowerCase(), command);
+        String key = command.getName().toLowerCase();
+        if(_commands.put(key, command) != null)
+        {
+            KsiuCore.getInstance().getLogger().warning(String.format("[%s 모듈] 중복된 명령어 등록 감지: \"%s\" 명령어가 대체되었습니다.", _moduleName, key));
+        }
     }
 
     public Map<String, ICommand> getCommands()
