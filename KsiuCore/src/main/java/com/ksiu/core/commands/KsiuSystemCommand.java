@@ -59,7 +59,7 @@ public class KsiuSystemCommand implements ICommandBundle
     {
         public StatusCommand()
         {
-            super("Status", "서버 리소스 상태를 확인합니다.");
+            super("status", "서버 리소스 상태를 확인합니다.");
         }
 
         @Override
