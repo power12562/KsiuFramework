@@ -59,11 +59,16 @@ public final class KsiuCore extends JavaPlugin
 
     public static TextComponentBuilder getPrefixTextBuilder()
     {
-        return TextComponentBuilder.newBuilder().content("[KsiuCore] ").color(NamedTextColor.AQUA);
+        return TextComponentBuilder.newBuilder().content("[Ksiu] ").color(NamedTextColor.AQUA);
+    }
+
+    public static TextComponentBuilder getWarningTextBuilder()
+    {
+        return TextComponentBuilder.newBuilder().content("[Ksiu:Warning] ").color(NamedTextColor.GOLD);
     }
 
     public static TextComponentBuilder getErrorTextBuilder()
     {
-        return TextComponentBuilder.newBuilder().content("[KsiuCore:Error] ").color(NamedTextColor.RED);
+        return TextComponentBuilder.newBuilder().content("[Ksiu:Error] ").color(NamedTextColor.RED);
     }
 }
