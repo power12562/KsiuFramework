@@ -13,6 +13,11 @@ public class ItemBuilder
     private final ItemStack _itemStack;
     private final ItemMeta _meta;
 
+    public static ItemBuilder newBuilder(Material material)
+    {
+        return new ItemBuilder(material);
+    }
+
     public ItemBuilder(Material material)
     {
         _itemStack = new ItemStack(material);
