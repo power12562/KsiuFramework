@@ -92,7 +92,7 @@ public final class KsiuGUI extends JavaPlugin
             for (int i = 0; i <= id; i++)
             {
                 final int newID = i;
-                stackGUI.setItem(i, ItemBuilder.newBuilder(Material.DIAMOND_BLOCK)
+                stackGUI.setItem(newID, ItemBuilder.newBuilder(Material.DIAMOND_BLOCK)
                         .setName(String.valueOf(newID))
                         .build(), event ->
                 {
