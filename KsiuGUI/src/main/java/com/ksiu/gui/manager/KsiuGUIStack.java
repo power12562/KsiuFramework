@@ -2,6 +2,7 @@ package com.ksiu.gui.manager;
 
 import com.ksiu.gui.KsiuGUI;
 import com.ksiu.gui.interfaces.IGUI;
+import com.ksiu.gui.interfaces.IInventoryGUI;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryCloseEvent;
@@ -16,41 +17,69 @@ public final class KsiuGUIStack
     {
     }
 
-    private static final Map<UUID, Stack<IGUI>> _userStacks = new HashMap<>();
+    private static final Map<UUID, Stack<GUITrace>> _userStacks = new HashMap<>();
 
     public static void push(Player player, IGUI gui)
     {
         UUID uuid = player.getUniqueId();
-        Stack<IGUI> stack = _userStacks.computeIfAbsent(uuid, id -> new Stack<>());
+        GUITrace trace = new GUITrace(gui);
+        push(player, trace);
+    }
 
-        stack.push(new GUITrace(gui));
-        GUITrace.addNavigationFlag(uuid);
-        gui.open(player);
+    public static void push(Player player, IInventoryGUI gui)
+    {
+        UUID uuid = player.getUniqueId();
+        InventoryGUITrace.addNavigationFlag(uuid);
+        GUITrace trace = new InventoryGUITrace(gui);
+        push(player, trace);
+    }
+
+    private static void push(Player player, GUITrace trace)
+    {
+        UUID uuid = player.getUniqueId();
+        Stack<GUITrace> stack = _userStacks.computeIfAbsent(uuid, id -> new Stack<>());
+        if (!stack.empty())
+            stack.peek().close(player);
+
+        Bukkit.getScheduler().runTask(KsiuGUI.getInstance(), () ->
+        {
+            stack.push(trace);
+            trace.open(player);
+        });
     }
 
     public static void pop(Player player)
     {
         UUID uuid = player.getUniqueId();
-        Stack<IGUI> stack = _userStacks.computeIfAbsent(uuid, id -> new Stack<>());
+        Stack<GUITrace> stack = _userStacks.computeIfAbsent(uuid, id -> new Stack<>());
         if (stack.isEmpty())
             return;
 
-        // 현재 창을 닫음 -> 클라이언트가 닫히면서 onClose 이벤트 발생
-        player.closeInventory();
+        GUITrace gui = stack.peek();
+        if (gui instanceof IInventoryGUI)
+            player.closeInventory(); // 현재 창을 닫음 -> 클라이언트가 닫히면서 onClose 이벤트 발생
+        else
+        {
+            gui.close(player);
+            Bukkit.getScheduler().runTask(KsiuGUI.getInstance(), () ->
+            {
+                KsiuGUIStack.openPrev(player);
+            });
+        }
     }
 
     public static void clear(Player player)
     {
         UUID uuid = player.getUniqueId();
         _userStacks.remove(uuid);
-        GUITrace.removeNavigationFlag(uuid);
+        InventoryGUITrace.removeNavigationFlag(uuid);
     }
 
     // onClose 이벤트용
     static void openPrev(Player player)
     {
         UUID uuid = player.getUniqueId();
-        Stack<IGUI> stack = _userStacks.get(uuid);
+        Stack<GUITrace> stack = _userStacks.get(uuid);
         if (stack == null || stack.isEmpty())
             return;
 
@@ -65,9 +94,35 @@ public final class KsiuGUIStack
         }
     }
 
-    private static final class GUITrace implements IGUI
+    private static class GUITrace
     {
         private final IGUI _target;
+
+        public GUITrace(IGUI target)
+        {
+
+            _target = target;
+        }
+
+        public void open(@NotNull Player player)
+        {
+            _target.open(player);
+        }
+
+        public void close(@NotNull Player player)
+        {
+            _target.close(player);
+        }
+
+        public @NotNull String getName()
+        {
+            return _target.getName();
+        }
+    }
+
+    private static final class InventoryGUITrace extends GUITrace implements IInventoryGUI
+    {
+        private final IInventoryGUI _inventory;
         private static final Set<UUID> _navigatingPlayers = new HashSet<>();
 
         public static void addNavigationFlag(UUID uuid)
@@ -80,33 +135,22 @@ public final class KsiuGUIStack
             _navigatingPlayers.remove(uuid);
         }
 
-        public GUITrace(IGUI target)
+        public InventoryGUITrace(IInventoryGUI target)
         {
-            _target = target;
-        }
-
-        @Override
-        public void open(@NotNull Player player)
-        {
-            _target.open(player);
-        }
-
-        @Override
-        public void close(@NotNull Player player)
-        {
-            _target.close(player);
+            super(target);
+            _inventory = target;
         }
 
         @Override
         public void onOpen(InventoryOpenEvent event)
         {
-            _target.onOpen(event);
+            _inventory.onOpen(event);
         }
 
         @Override
         public void onClose(InventoryCloseEvent event)
         {
-            _target.onClose(event);
+            _inventory.onClose(event);
             Bukkit.getScheduler().runTask(KsiuGUI.getInstance(), () ->
             {
                 Player player = (Player) event.getPlayer();
@@ -118,12 +162,6 @@ public final class KsiuGUIStack
                 }
                 KsiuGUIStack.openPrev(player);
             });
-        }
-
-        @Override
-        public @NotNull String getName()
-        {
-            return _target.getName();
         }
     }
 
