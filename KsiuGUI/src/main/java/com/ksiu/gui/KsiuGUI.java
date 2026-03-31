@@ -5,27 +5,18 @@ import com.ksiu.core.builders.ItemBuilder;
 import com.ksiu.core.commands.base.CommandBase;
 import com.ksiu.core.commands.base.OpCommandBase;
 import com.ksiu.core.commands.container.KsiuCommandList;
-import com.ksiu.gui.interfaces.IGUI;
-import com.ksiu.gui.interfaces.IInventoryGUI;
+import com.ksiu.gui.manager.GUIListener;
 import com.ksiu.gui.manager.KsiuGUIStack;
 import com.ksiu.gui.virtualInventory.VirtualInventoryGUIBase;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.inventory.InventoryHolder;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public final class KsiuGUI extends JavaPlugin
@@ -43,52 +34,6 @@ public final class KsiuGUI extends JavaPlugin
     }
 
     private final KsiuCommandList _commandList = new KsiuCommandList("gui");
-
-    private static class GUIListener implements Listener
-    {
-        @EventHandler
-        public void onInventoryOpen(InventoryOpenEvent event)
-        {
-            InventoryHolder holder = event.getInventory().getHolder();
-            if (!(holder instanceof IGUI))
-                return;
-
-            if (holder instanceof IInventoryGUI gui)
-                gui.onOpen(event);
-        }
-
-        @EventHandler
-        public void onInventoryClose(InventoryCloseEvent event)
-        {
-            InventoryHolder holder = event.getInventory().getHolder();
-            if (!(holder instanceof IGUI))
-                return;
-
-            if (holder instanceof IInventoryGUI gui)
-                gui.onClose(event);
-        }
-
-        @EventHandler
-        public void onInventoryClick(InventoryClickEvent event)
-        {
-            if (!(event.getInventory().getHolder() instanceof IGUI))
-                return;
-
-            if (event.getInventory().getHolder() instanceof IInventoryGUI gui)
-            {
-                event.setCancelled(true);
-                if (event.getRawSlot() < event.getInventory().getSize())
-                    gui.onClick(event);
-            }
-        }
-
-        @EventHandler
-        public void onQuit(PlayerQuitEvent event)
-        {
-            KsiuGUIStack.clear(event.getPlayer());
-        }
-
-    }
 
     @Override
     public void onEnable()
@@ -133,24 +78,37 @@ public final class KsiuGUI extends JavaPlugin
 
     private static final class TestGUI extends VirtualInventoryGUIBase
     {
+        public static void newTestStack(Player player)
+        {
+            newTestStack(player, 0);
+        }
+
+        private static void newTestStack(Player player, int id)
+        {
+            if (id == 52)
+                return;
+
+            TestGUI stackGUI = new TestGUI(String.valueOf(id), ESize.Size54);
+            for (int i = 0; i <= id; i++)
+            {
+                final int newID = i;
+                stackGUI.setItem(i, ItemBuilder.newBuilder(Material.DIAMOND_BLOCK)
+                        .setName(String.valueOf(newID))
+                        .build(), event ->
+                {
+                    newTestStack(player, newID + 1);
+                });
+            }
+            stackGUI.setItem(53, ItemBuilder.newBuilder(Material.REDSTONE_BLOCK).build(), event ->
+            {
+                KsiuGUIStack.pop(player);
+            });
+            KsiuGUIStack.push(player, stackGUI);
+        }
+
         public TestGUI(String name, ESize eSize)
         {
             super(name, eSize, Component.text(name));
-            Material[] materials = Material.values();
-            for (int i = 0; i < eSize.getValue(); i++)
-            {
-                ItemStack item = new ItemBuilder(materials[i])
-                        .setName(String.valueOf(i))
-                        .setLore(Collections.emptyList())
-                        .build();
-                final int slotIndex = i;
-                setItem(i, item, event ->
-                {
-                    event.getWhoClicked().sendMessage(KsiuCore.getPrefixTextBuilder()
-                            .append(Component.text(MessageFormat.format("Click: {0}", String.valueOf(slotIndex))))
-                            .build());
-                });
-            }
         }
 
         @Override
@@ -186,9 +144,25 @@ public final class KsiuGUI extends JavaPlugin
             if (!(sender instanceof Player player))
                 return false;
 
+            if (args.length < 1)
+            {
+                player.sendMessage(Component.text("gui test [이름] [9, 18, 27, 36, 45, 54]"));
+                return true;
+            }
+
+            if (args.length == 1)
+            {
+                if (args[0].equalsIgnoreCase("stack"))
+                {
+                    TestGUI.newTestStack(player);
+                    player.sendMessage(Component.text("스택 테스트 GUI를 시작합니다."));
+                    return true;
+                }
+            }
+
             if (args.length < 2)
             {
-                player.sendMessage(Component.text("사용법: /gui test [이름] [9, 18, 27, 36, 45, 54]"));
+                player.sendMessage(Component.text("gui test [이름] [9, 18, 27, 36, 45, 54]"));
                 return true;
             }
 
@@ -218,7 +192,9 @@ public final class KsiuGUI extends JavaPlugin
         public List<String> onTabComplete(CommandSender sender, String[] args)
         {
             if (args.length == 1)
-                return List.of("<GUI이름>");
+            {
+                return List.of("stack", "<GUI이름>");
+            }
 
             if (args.length == 2)
             {
