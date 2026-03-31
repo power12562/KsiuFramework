@@ -3,6 +3,7 @@ package com.ksiu.gui;
 import com.ksiu.core.KsiuCore;
 import com.ksiu.core.builders.ItemBuilder;
 import com.ksiu.core.commands.base.CommandBase;
+import com.ksiu.core.commands.base.OpCommandBase;
 import com.ksiu.core.commands.container.KsiuCommandList;
 import com.ksiu.gui.virtualInventory.VirtualInventoryGUIBase;
 import net.kyori.adventure.text.Component;
@@ -147,7 +148,7 @@ public final class KsiuGUI extends JavaPlugin
 
     }
 
-    private static final class TestCommand extends CommandBase
+    private static final class TestCommand extends OpCommandBase
     {
         public TestCommand()
         {
@@ -155,7 +156,7 @@ public final class KsiuGUI extends JavaPlugin
         }
 
         @Override
-        public boolean onCommand(CommandSender sender, String[] args)
+        public boolean onOpCommand(CommandSender sender, String[] args)
         {
             if (!(sender instanceof Player player))
                 return false;
