@@ -54,9 +54,9 @@ public final class KsiuGUIStack
         if (stack == null || stack.empty())
             return;
 
-        Tracer gui = stack.peek();
-        gui.close(player);
-        if (gui instanceof InventoryTracer)
+        Tracer trace = stack.peek();
+        trace.close(player);
+        if (trace instanceof InventoryTracer)
             return;
 
         Bukkit.getScheduler().runTask(KsiuGUI.getInstance(), () ->
