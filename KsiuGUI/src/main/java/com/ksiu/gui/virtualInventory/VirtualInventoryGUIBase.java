@@ -1,13 +1,11 @@
 package com.ksiu.gui.virtualInventory;
 
-import com.ksiu.gui.interfaces.IGUI;
+import com.ksiu.gui.interfaces.IInventoryGUI;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
@@ -19,7 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 
-public abstract class VirtualInventoryGUIBase implements IGUI, InventoryHolder, Listener
+public abstract class VirtualInventoryGUIBase implements IInventoryGUI, InventoryHolder, Listener
 {
     private final Inventory _inventory;
     private final String _name;
@@ -81,18 +79,10 @@ public abstract class VirtualInventoryGUIBase implements IGUI, InventoryHolder, 
         player.openInventory(_inventory);
     }
 
-    public void onOpen(InventoryOpenEvent event)
-    {
-    }
-
     @Override
     public final void close(@NotNull Player player)
     {
         player.closeInventory();
-    }
-
-    public void onClose(InventoryCloseEvent event)
-    {
     }
 
     @Override
