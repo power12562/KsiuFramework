@@ -5,6 +5,9 @@ import com.ksiu.core.builders.ItemBuilder;
 import com.ksiu.core.commands.base.CommandBase;
 import com.ksiu.core.commands.base.OpCommandBase;
 import com.ksiu.core.commands.container.KsiuCommandList;
+import com.ksiu.gui.interfaces.IGUI;
+import com.ksiu.gui.interfaces.IInventoryGUI;
+import com.ksiu.gui.manager.KsiuGUIStack;
 import com.ksiu.gui.virtualInventory.VirtualInventoryGUIBase;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
@@ -15,6 +18,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -25,6 +30,13 @@ import java.util.List;
 
 public final class KsiuGUI extends JavaPlugin
 {
+    private static KsiuGUI instance;
+
+    public static KsiuGUI getInstance()
+    {
+        return instance;
+    }
+
     public static String getVersion()
     {
         return "1.0.0";
@@ -37,33 +49,45 @@ public final class KsiuGUI extends JavaPlugin
         @EventHandler
         public void onInventoryOpen(InventoryOpenEvent event)
         {
-            if (event.getInventory().getHolder() instanceof VirtualInventoryGUIBase gui)
-            {
+            InventoryHolder holder = event.getInventory().getHolder();
+            if (!(holder instanceof IGUI))
+                return;
+
+            if (holder instanceof IInventoryGUI gui)
                 gui.onOpen(event);
-            }
         }
 
         @EventHandler
         public void onInventoryClose(InventoryCloseEvent event)
         {
-            if (event.getInventory().getHolder() instanceof VirtualInventoryGUIBase gui)
-            {
+            InventoryHolder holder = event.getInventory().getHolder();
+            if (!(holder instanceof IGUI))
+                return;
+
+            if (holder instanceof IInventoryGUI gui)
                 gui.onClose(event);
-            }
         }
 
         @EventHandler
         public void onInventoryClick(InventoryClickEvent event)
         {
-            if (event.getInventory().getHolder() instanceof VirtualInventoryGUIBase gui)
+            if (!(event.getInventory().getHolder() instanceof IGUI))
+                return;
+
+            if (event.getInventory().getHolder() instanceof IInventoryGUI gui)
             {
                 event.setCancelled(true);
                 if (event.getRawSlot() < event.getInventory().getSize())
-                {
                     gui.onClick(event);
-                }
             }
         }
+
+        @EventHandler
+        public void onQuit(PlayerQuitEvent event)
+        {
+            KsiuGUIStack.clear(event.getPlayer());
+        }
+
     }
 
     @Override
@@ -76,6 +100,7 @@ public final class KsiuGUI extends JavaPlugin
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
+        instance = this;
         getLogger().info("KsiuGUI 플러그인 활성화.");
         getServer().getPluginManager().registerEvents(new GUIListener(), this);
         _ksiuCore.getCommandRouter().registerCommandBundle(_commandList.getModuleName(), _commandList);
