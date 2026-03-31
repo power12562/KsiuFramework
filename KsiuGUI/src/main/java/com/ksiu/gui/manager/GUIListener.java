@@ -23,7 +23,8 @@ public class GUIListener implements Listener
         if (holder instanceof IInventoryGUI gui)
         {
             Player player = (Player) event.getPlayer();
-            if (KsiuGUIStack.peek(player) instanceof KsiuGUIStack.InventoryGUITrace trace)
+            KsiuGUIStack.Tracer stackPeek = KsiuGUIStack.peek(player);
+            if (stackPeek instanceof KsiuGUIStack.InventoryTracer trace)
                 trace.onOpen(event);
             else
                 gui.onOpen(event);
@@ -37,10 +38,12 @@ public class GUIListener implements Listener
         if (!(holder instanceof IGUI))
             return;
 
+
         if (holder instanceof IInventoryGUI gui)
         {
             Player player = (Player) event.getPlayer();
-            if (KsiuGUIStack.peek(player) instanceof KsiuGUIStack.InventoryGUITrace trace)
+            KsiuGUIStack.Tracer stackPeek = KsiuGUIStack.peek(player);
+            if (stackPeek instanceof KsiuGUIStack.InventoryTracer trace)
                 trace.onClose(event);
             else
                 gui.onClose(event);
@@ -57,7 +60,9 @@ public class GUIListener implements Listener
         {
             event.setCancelled(true);
             if (event.getRawSlot() < event.getInventory().getSize())
+            {
                 gui.onClick(event);
+            }
         }
     }
 
