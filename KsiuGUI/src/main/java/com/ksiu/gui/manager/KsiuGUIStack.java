@@ -68,6 +68,16 @@ public final class KsiuGUIStack
         }
     }
 
+    static GUITrace peek(Player player)
+    {
+        UUID uuid = player.getUniqueId();
+        Stack<GUITrace> stack = _userStacks.get(uuid);
+        if (stack == null || stack.empty())
+            return null;
+
+        return stack.peek();
+    }
+
     public static void clear(Player player)
     {
         UUID uuid = player.getUniqueId();
@@ -94,7 +104,7 @@ public final class KsiuGUIStack
         }
     }
 
-    private static class GUITrace
+    static class GUITrace
     {
         private final IGUI _target;
 
@@ -120,7 +130,7 @@ public final class KsiuGUIStack
         }
     }
 
-    private static final class InventoryGUITrace extends GUITrace implements IInventoryGUI
+    static final class InventoryGUITrace extends GUITrace
     {
         private final IInventoryGUI _inventory;
         private static final Set<UUID> _navigatingPlayers = new HashSet<>();
@@ -141,13 +151,11 @@ public final class KsiuGUIStack
             _inventory = target;
         }
 
-        @Override
         public void onOpen(InventoryOpenEvent event)
         {
             _inventory.onOpen(event);
         }
 
-        @Override
         public void onClose(InventoryCloseEvent event)
         {
             _inventory.onClose(event);
