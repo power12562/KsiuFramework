@@ -17,33 +17,32 @@ public final class KsiuGUIStack
     {
     }
 
-    private static final Map<UUID, Stack<GUITrace>> _userStacks = new HashMap<>();
+    private static final Map<UUID, Stack<Tracer>> _userStacks = new HashMap<>();
 
     public static void push(Player player, IGUI gui)
     {
-        UUID uuid = player.getUniqueId();
-        GUITrace trace = new GUITrace(gui);
+        Tracer trace = new Tracer(gui);
         push(player, trace);
     }
 
     public static void push(Player player, IInventoryGUI gui)
     {
         UUID uuid = player.getUniqueId();
-        InventoryGUITrace.addNavigationFlag(uuid);
-        GUITrace trace = new InventoryGUITrace(gui);
+        InventoryTracer.addNavigationFlag(uuid);
+        Tracer trace = new InventoryTracer(gui);
         push(player, trace);
     }
 
-    private static void push(Player player, GUITrace trace)
+    private static void push(Player player, Tracer trace)
     {
         UUID uuid = player.getUniqueId();
-        Stack<GUITrace> stack = _userStacks.computeIfAbsent(uuid, id -> new Stack<>());
+        Stack<Tracer> stack = _userStacks.computeIfAbsent(uuid, id -> new Stack<>());
         if (!stack.empty())
             stack.peek().close(player);
 
+        stack.push(trace);
         Bukkit.getScheduler().runTask(KsiuGUI.getInstance(), () ->
         {
-            stack.push(trace);
             trace.open(player);
         });
     }
@@ -51,27 +50,25 @@ public final class KsiuGUIStack
     public static void pop(Player player)
     {
         UUID uuid = player.getUniqueId();
-        Stack<GUITrace> stack = _userStacks.computeIfAbsent(uuid, id -> new Stack<>());
-        if (stack.isEmpty())
+        Stack<Tracer> stack = _userStacks.get(uuid);
+        if (stack == null || stack.empty())
             return;
 
-        GUITrace gui = stack.peek();
-        if (gui instanceof IInventoryGUI)
-            player.closeInventory(); // 현재 창을 닫음 -> 클라이언트가 닫히면서 onClose 이벤트 발생
-        else
+        Tracer gui = stack.peek();
+        gui.close(player);
+        if (gui instanceof InventoryTracer)
+            return;
+
+        Bukkit.getScheduler().runTask(KsiuGUI.getInstance(), () ->
         {
-            gui.close(player);
-            Bukkit.getScheduler().runTask(KsiuGUI.getInstance(), () ->
-            {
-                KsiuGUIStack.openPrev(player);
-            });
-        }
+            KsiuGUIStack.openPrev(player);
+        });
     }
 
-    static GUITrace peek(Player player)
+    static Tracer peek(Player player)
     {
         UUID uuid = player.getUniqueId();
-        Stack<GUITrace> stack = _userStacks.get(uuid);
+        Stack<Tracer> stack = _userStacks.get(uuid);
         if (stack == null || stack.empty())
             return null;
 
@@ -82,21 +79,22 @@ public final class KsiuGUIStack
     {
         UUID uuid = player.getUniqueId();
         _userStacks.remove(uuid);
-        InventoryGUITrace.removeNavigationFlag(uuid);
+        InventoryTracer.removeNavigationFlag(uuid);
     }
 
     // onClose 이벤트용
     static void openPrev(Player player)
     {
         UUID uuid = player.getUniqueId();
-        Stack<GUITrace> stack = _userStacks.get(uuid);
+        final Stack<Tracer> stack = _userStacks.get(uuid);
         if (stack == null || stack.isEmpty())
             return;
 
         stack.pop();
         if (!stack.empty())
         {
-            stack.peek().open(player);
+            Tracer peek = stack.peek();
+            peek.open(player);
         }
         else
         {
@@ -104,11 +102,11 @@ public final class KsiuGUIStack
         }
     }
 
-    static class GUITrace
+    static class Tracer
     {
         private final IGUI _target;
 
-        public GUITrace(IGUI target)
+        public Tracer(IGUI target)
         {
 
             _target = target;
@@ -130,7 +128,7 @@ public final class KsiuGUIStack
         }
     }
 
-    static final class InventoryGUITrace extends GUITrace
+    static final class InventoryTracer extends Tracer
     {
         private final IInventoryGUI _inventory;
         private static final Set<UUID> _navigatingPlayers = new HashSet<>();
@@ -145,7 +143,7 @@ public final class KsiuGUIStack
             _navigatingPlayers.remove(uuid);
         }
 
-        public InventoryGUITrace(IInventoryGUI target)
+        public InventoryTracer(IInventoryGUI target)
         {
             super(target);
             _inventory = target;
@@ -159,15 +157,16 @@ public final class KsiuGUIStack
         public void onClose(InventoryCloseEvent event)
         {
             _inventory.onClose(event);
+            Player player = (Player) event.getPlayer();
+            UUID uuid = player.getUniqueId();
+            if (_navigatingPlayers.contains(uuid))
+            {
+                _navigatingPlayers.remove(uuid);
+                return;
+            }
+
             Bukkit.getScheduler().runTask(KsiuGUI.getInstance(), () ->
             {
-                Player player = (Player) event.getPlayer();
-                UUID uuid = player.getUniqueId();
-                if (_navigatingPlayers.contains(uuid))
-                {
-                    _navigatingPlayers.remove(uuid);
-                    return;
-                }
                 KsiuGUIStack.openPrev(player);
             });
         }
