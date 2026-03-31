@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class TextComponentBuilder
@@ -65,22 +64,6 @@ public class TextComponentBuilder
     }
 
     @NotNull
-    @Contract("_ -> this")
-    public TextComponentBuilder mapChildren(@NotNull Function<BuildableComponent<?, ?>, ? extends BuildableComponent<?, ?>> function)
-    {
-        _builder.mapChildren(function);
-        return this;
-    }
-
-    @NotNull
-    @Contract("_ -> this")
-    public TextComponentBuilder append(@NotNull Component @NotNull ... components)
-    {
-        _builder.append(components);
-        return this;
-    }
-
-    @NotNull
     @Contract("_, _ -> this")
     public TextComponentBuilder mergeStyle(@NotNull Component that, Style.@NotNull Merge @NotNull ... merges)
     {
@@ -88,13 +71,6 @@ public class TextComponentBuilder
         return this;
     }
 
-    @NotNull
-    @Contract("_ -> this")
-    public TextComponentBuilder mapChildrenDeep(@NotNull Function<BuildableComponent<?, ?>, ? extends BuildableComponent<?, ?>> function)
-    {
-        _builder.mapChildrenDeep(function);
-        return this;
-    }
 
     @NotNull
     @Contract("_, _ -> this")
