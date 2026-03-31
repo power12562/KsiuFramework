@@ -1,9 +1,8 @@
 package com.ksiu.core;
 
+import com.ksiu.core.builders.TextComponentBuilder;
 import com.ksiu.core.commands.KsiuCommandRouter;
 import com.ksiu.core.commands.KsiuSystemCommand;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandMap;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -58,13 +57,13 @@ public final class KsiuCore extends JavaPlugin
         return _commandRouter;
     }
 
-    public static TextComponent.Builder getPrefixTextBuilder()
+    public static TextComponentBuilder getPrefixTextBuilder()
     {
-        return Component.text().content("[KsiuCore] ").color(NamedTextColor.AQUA);
+        return TextComponentBuilder.newBuilder().content("[KsiuCore] ").color(NamedTextColor.AQUA);
     }
 
-    public static TextComponent.Builder getErrorTextBuilder()
+    public static TextComponentBuilder getErrorTextBuilder()
     {
-        return Component.text().content("[KsiuCore:Error] ").color(NamedTextColor.RED);
+        return TextComponentBuilder.newBuilder().content("[KsiuCore:Error] ").color(NamedTextColor.RED);
     }
 }
