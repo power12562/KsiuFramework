@@ -1,6 +1,7 @@
 package com.ksiu.gui.virtualInventory;
 
 import com.ksiu.gui.interfaces.IGUI;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
@@ -12,7 +13,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
-import net.kyori.adventure.text.Component;
+import org.jspecify.annotations.NonNull;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -75,18 +76,24 @@ public abstract class VirtualInventoryGUIBase implements IGUI, InventoryHolder, 
     }
 
     @Override
-    public final void open(Player player)
+    public final void open(@NotNull Player player)
     {
         player.openInventory(_inventory);
     }
-    public void onOpen(InventoryOpenEvent event) {}
+
+    public void onOpen(InventoryOpenEvent event)
+    {
+    }
 
     @Override
-    public final void close(Player player)
+    public final void close(@NotNull Player player)
     {
         player.closeInventory();
     }
-    public void onClose(InventoryCloseEvent event) {}
+
+    public void onClose(InventoryCloseEvent event)
+    {
+    }
 
     @Override
     public final @NotNull Inventory getInventory()
@@ -95,7 +102,7 @@ public abstract class VirtualInventoryGUIBase implements IGUI, InventoryHolder, 
     }
 
     @Override
-    public final String getName()
+    public final @NonNull @NotNull String getName()
     {
         return _name;
     }
@@ -107,6 +114,18 @@ public abstract class VirtualInventoryGUIBase implements IGUI, InventoryHolder, 
         {
             _actions.put(slot, action);
         }
+    }
+
+    public final void removeItem(int slot)
+    {
+        _inventory.setItem(slot, null);
+        _actions.remove(slot);
+    }
+
+    public final void clear()
+    {
+        _inventory.clear();
+        _actions.clear();
     }
 
     public final void onClick(InventoryClickEvent event)
