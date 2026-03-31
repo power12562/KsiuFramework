@@ -19,6 +19,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public final class KsiuGUI extends JavaPlugin
@@ -56,7 +57,10 @@ public final class KsiuGUI extends JavaPlugin
             if (event.getInventory().getHolder() instanceof VirtualInventoryGUIBase gui)
             {
                 event.setCancelled(true);
-                gui.onClick(event);
+                if (event.getRawSlot() < event.getInventory().getSize())
+                {
+                    gui.onClick(event);
+                }
             }
         }
     }
@@ -109,7 +113,10 @@ public final class KsiuGUI extends JavaPlugin
             Material[] materials = Material.values();
             for (int i = 0; i < eSize.getValue(); i++)
             {
-                ItemStack item = new ItemBuilder(materials[i]).setName(String.valueOf(i)).build();
+                ItemStack item = new ItemBuilder(materials[i])
+                        .setName(String.valueOf(i))
+                        .setLore(Collections.emptyList())
+                        .build();
                 final int slotIndex = i;
                 setItem(i, item, event ->
                 {
@@ -123,13 +130,19 @@ public final class KsiuGUI extends JavaPlugin
         @Override
         public void onOpen(InventoryOpenEvent event)
         {
-            event.getPlayer().sendMessage("Test GUI open.");
+            event.getPlayer().sendMessage(KsiuCore.getPrefixTextBuilder()
+                    .append("Test GUI open.")
+                    .build()
+            );
         }
 
         @Override
         public void onClose(InventoryCloseEvent event)
         {
-            event.getPlayer().sendMessage("Test GUI close.");
+            event.getPlayer().sendMessage(KsiuCore.getPrefixTextBuilder()
+                    .append("Test GUI close.")
+                    .build()
+            );
         }
 
     }
