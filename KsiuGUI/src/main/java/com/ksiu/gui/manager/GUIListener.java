@@ -7,6 +7,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.InventoryHolder;
@@ -17,51 +18,77 @@ public class GUIListener implements Listener
     public void onInventoryOpen(InventoryOpenEvent event)
     {
         InventoryHolder holder = event.getInventory().getHolder();
-        if (!(holder instanceof IGUI))
+        if (!(holder instanceof IInventoryGUI gui))
             return;
 
-        if (holder instanceof IInventoryGUI gui)
+        Player player = (Player) event.getPlayer();
+        KsiuGUIStack.Tracer stackPeek = KsiuGUIStack.peek(player);
+        if (stackPeek != null)
         {
-            Player player = (Player) event.getPlayer();
-            KsiuGUIStack.Tracer stackPeek = KsiuGUIStack.peek(player);
-            if (stackPeek instanceof KsiuGUIStack.InventoryTracer trace)
-                trace.onOpen(event);
-            else
-                gui.onOpen(event);
+            // 스택 push됨
+            IGUI peek = stackPeek.getGUI();
+            if (peek == gui)
+            {
+                if (stackPeek instanceof KsiuGUIStack.InventoryTracer trace)
+                    trace.onOpen(event);
+
+                return;
+            }
+            KsiuGUIStack.clear(player);
         }
+        // 스택 없이 생성됨.
+        gui.onOpen(event);
     }
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event)
     {
         InventoryHolder holder = event.getInventory().getHolder();
-        if (!(holder instanceof IGUI))
+        if (!(holder instanceof IInventoryGUI gui))
             return;
 
-
-        if (holder instanceof IInventoryGUI gui)
+        Player player = (Player) event.getPlayer();
+        KsiuGUIStack.Tracer stackPeek = KsiuGUIStack.peek(player);
+        if (stackPeek != null)
         {
-            Player player = (Player) event.getPlayer();
-            KsiuGUIStack.Tracer stackPeek = KsiuGUIStack.peek(player);
-            if (stackPeek instanceof KsiuGUIStack.InventoryTracer trace)
-                trace.onClose(event);
-            else
-                gui.onClose(event);
+            // 스택 push됨
+            IGUI peek = stackPeek.getGUI();
+            if (peek == gui)
+            {
+                if (stackPeek instanceof KsiuGUIStack.InventoryTracer trace)
+                    trace.onClose(event);
+
+                return;
+            }
+            KsiuGUIStack.clear(player);
         }
+        // 스택 없이 생성됨.
+        gui.onClose(event);
     }
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event)
     {
-        if (!(event.getInventory().getHolder() instanceof IGUI))
+        if (!(event.getInventory().getHolder() instanceof IInventoryGUI gui))
             return;
 
-        if (event.getInventory().getHolder() instanceof IInventoryGUI gui)
+        if (event.getRawSlot() < event.getInventory().getSize())
         {
             event.setCancelled(true);
-            if (event.getRawSlot() < event.getInventory().getSize())
+            gui.onClick(event);
+        }
+    }
+
+    @EventHandler
+    private void onInventoryDrag(InventoryDragEvent event)
+    {
+        int inventorySize = event.getInventory().getSize();
+        for (int slot : event.getRawSlots())
+        {
+            if (slot < inventorySize)
             {
-                gui.onClick(event);
+                event.setCancelled(true);
+                return;
             }
         }
     }
