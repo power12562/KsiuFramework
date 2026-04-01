@@ -65,6 +65,21 @@ public final class KsiuGUIStack
         });
     }
 
+    public static void popOrClose(@NotNull Player player, @NotNull IGUI owner)
+    {
+        Tracer peek = peek(player);
+        if (peek != null)
+        {
+            if (peek.getGUI() == owner)
+            {
+                pop(player);
+                return;
+            }
+            clear(player);
+        }
+        owner.close(player);
+    }
+
     static Tracer peek(Player player)
     {
         UUID uuid = player.getUniqueId();
@@ -106,9 +121,14 @@ public final class KsiuGUIStack
     {
         private final IGUI _target;
 
-        public Tracer(IGUI target)
+        @NotNull
+        IGUI getGUI()
         {
+            return _target;
+        }
 
+        public Tracer(@NotNull IGUI target)
+        {
             _target = target;
         }
 
@@ -143,7 +163,7 @@ public final class KsiuGUIStack
             _navigatingPlayers.remove(uuid);
         }
 
-        public InventoryTracer(IInventoryGUI target)
+        public InventoryTracer(@NotNull IInventoryGUI target)
         {
             super(target);
             _inventory = target;
