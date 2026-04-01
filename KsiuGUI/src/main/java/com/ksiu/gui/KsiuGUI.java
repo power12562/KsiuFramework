@@ -5,6 +5,7 @@ import com.ksiu.core.builders.ItemBuilder;
 import com.ksiu.core.commands.base.CommandBase;
 import com.ksiu.core.commands.base.OpCommandBase;
 import com.ksiu.core.commands.container.KsiuCommandList;
+import com.ksiu.gui.dialog.DialogInputString;
 import com.ksiu.gui.manager.GUIListener;
 import com.ksiu.gui.manager.KsiuGUIStack;
 import com.ksiu.gui.virtualInventory.VirtualInventoryGUIBase;
@@ -51,6 +52,7 @@ public final class KsiuGUI extends JavaPlugin
         _ksiuCore.getCommandRouter().registerCommandBundle(_commandList.getModuleName(), _commandList);
         _commandList.put(new VersionCommand());
         _commandList.put(new TestCommand());
+        _commandList.put(new DialogCommand());
     }
 
     @Override
@@ -96,7 +98,7 @@ public final class KsiuGUI extends JavaPlugin
                         .setName(String.valueOf(newID))
                         .build(), event ->
                 {
-                    newTestStack(player, newID + 1);
+                    newTestStack(player, id + 1);
                 });
             }
             stackGUI.setItem(53, ItemBuilder.newBuilder(Material.REDSTONE_BLOCK).build(), event ->
@@ -208,4 +210,54 @@ public final class KsiuGUI extends JavaPlugin
             return List.of();
         }
     }
+
+    private static final class DialogTestGUI extends VirtualInventoryGUIBase
+    {
+        private final DialogInputString _inputDialog;
+
+        public DialogTestGUI(String name)
+        {
+            super(name, ESize.Size9, Component.text(name));
+            _inputDialog = new DialogInputString("문자열 입력 테스트 다이얼로그", "메시지", (player, message) ->
+            {
+                player.sendMessage(KsiuCore.getPrefixTextBuilder().append(message).build());
+            });
+
+            setItem(1, ItemBuilder.newBuilder(Material.DIAMOND_BLOCK)
+                    .setName("문자열 입력해보기.")
+                    .build(), event ->
+            {
+                KsiuGUIStack.push((Player) event.getWhoClicked(), _inputDialog);
+            });
+
+            setItem(7, ItemBuilder.newBuilder(Material.REDSTONE_BLOCK)
+                    .setName("나가기.")
+                    .build(), event ->
+            {
+                KsiuGUIStack.pop((Player) event.getWhoClicked());
+            });
+        }
+    }
+
+    private static final class DialogCommand extends OpCommandBase
+    {
+        public DialogCommand()
+        {
+            super("dialog", "다이얼로그 입력을 테스트합니다.");
+        }
+
+        @Override
+        public boolean onOpCommand(CommandSender sender, String[] args)
+        {
+            if (!(sender instanceof Player player))
+            {
+                sender.sendMessage(Component.text("이 명령어는 플레이어만 사용할 수 있습니다."));
+                return true;
+            }
+            DialogTestGUI testGui = new DialogTestGUI("테스트 메뉴");
+            KsiuGUIStack.push(player, testGui);
+            return true;
+        }
+    }
+
 }
