@@ -28,7 +28,6 @@ public final class KsiuGUIStack
     public static void push(Player player, IInventoryGUI gui)
     {
         UUID uuid = player.getUniqueId();
-        InventoryTracer.addNavigationFlag(uuid);
         Tracer trace = new InventoryTracer(gui);
         push(player, trace);
     }
@@ -38,7 +37,13 @@ public final class KsiuGUIStack
         UUID uuid = player.getUniqueId();
         Stack<Tracer> stack = _userStacks.computeIfAbsent(uuid, id -> new Stack<>());
         if (!stack.empty())
-            stack.peek().close(player);
+        {
+            Tracer peek = stack.peek();
+            if (peek instanceof InventoryTracer)
+                InventoryTracer.addNavigationFlag(uuid);
+
+            peek.close(player);
+        }
 
         stack.push(trace);
         Bukkit.getScheduler().runTask(KsiuGUI.getInstance(), () ->
@@ -59,9 +64,10 @@ public final class KsiuGUIStack
         if (trace instanceof InventoryTracer)
             return;
 
+        stack.pop();
         Bukkit.getScheduler().runTask(KsiuGUI.getInstance(), () ->
         {
-            KsiuGUIStack.openPrev(player);
+            KsiuGUIStack.openPeek(player);
         });
     }
 
@@ -98,14 +104,13 @@ public final class KsiuGUIStack
     }
 
     // onClose 이벤트용
-    static void openPrev(Player player)
+    private static void openPeek(Player player)
     {
         UUID uuid = player.getUniqueId();
         final Stack<Tracer> stack = _userStacks.get(uuid);
-        if (stack == null || stack.isEmpty())
+        if (stack == null)
             return;
 
-        stack.pop();
         if (!stack.empty())
         {
             Tracer peek = stack.peek();
@@ -185,9 +190,14 @@ public final class KsiuGUIStack
                 return;
             }
 
+            Stack<Tracer> stack = _userStacks.get(uuid);
+            if (stack == null || stack.empty())
+                return;
+
+            Tracer trace = stack.pop();
             Bukkit.getScheduler().runTask(KsiuGUI.getInstance(), () ->
             {
-                KsiuGUIStack.openPrev(player);
+                KsiuGUIStack.openPeek(player);
             });
         }
     }
