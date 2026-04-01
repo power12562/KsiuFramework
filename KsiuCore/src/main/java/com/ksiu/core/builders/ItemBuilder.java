@@ -43,6 +43,11 @@ public class ItemBuilder
         return this;
     }
 
+    public ItemBuilder addLore(String string)
+    {
+        return addLore(Component.text(string));
+    }
+
     public ItemBuilder addLore(Component line)
     {
         if (_meta != null)
