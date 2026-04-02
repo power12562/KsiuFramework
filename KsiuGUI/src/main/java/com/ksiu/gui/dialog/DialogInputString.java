@@ -1,5 +1,7 @@
 package com.ksiu.gui.dialog;
 
+import com.ksiu.gui.interfaces.ICancelEvent;
+import com.ksiu.gui.interfaces.IStringEvent;
 import com.ksiu.gui.manager.KsiuGUIStack;
 import io.papermc.paper.dialog.Dialog;
 import io.papermc.paper.registry.data.dialog.ActionButton;
@@ -14,19 +16,28 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
-import java.util.function.BiConsumer;
 
 public class DialogInputString extends DialogGUIBase
 {
-    public DialogInputString(String name, String label, BiConsumer<Player, String> outEvent)
+    public DialogInputString(String name, String label, IStringEvent outEvent)
     {
         super(name);
         _label = label;
         _outEvent = outEvent;
+        _cancelEvent = null;
+    }
+
+    public DialogInputString(String name, String label, IStringEvent outEvent, ICancelEvent cancelEvent)
+    {
+        super(name);
+        _label = label;
+        _outEvent = outEvent;
+        _cancelEvent = cancelEvent;
     }
 
     private final String _label;
-    private final BiConsumer<Player, String> _outEvent;
+    private final IStringEvent _outEvent;
+    private final ICancelEvent _cancelEvent;
 
     @Override
     protected @NotNull Dialog onDialogBuild()
@@ -52,7 +63,7 @@ public class DialogInputString extends DialogGUIBase
                                                         if (input == null)
                                                             return;
 
-                                                        _outEvent.accept(player, input);
+                                                        _outEvent.execute(player, input);
                                                         KsiuGUIStack.popOrClose(player, this);
                                                     },
                                                     ClickCallback.Options.builder().build()
@@ -64,6 +75,9 @@ public class DialogInputString extends DialogGUIBase
                                                     {
                                                         if (!(audience instanceof Player player))
                                                             return;
+
+                                                        if (_cancelEvent != null)
+                                                            _cancelEvent.execute(player);
 
                                                         KsiuGUIStack.popOrClose(player, this);
                                                     },
