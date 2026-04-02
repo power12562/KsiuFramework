@@ -37,6 +37,8 @@ public final class KsiuStreamBridge extends JavaPlugin
         }
         instance = this;
         _ksiuCore.getCommandRouter().registerCommandBundle("streamBridge", _commandList);
+        _commandList.put(new VersionCommand());
+        _commandList.put(new ConnectCommand());
 
     }
 
