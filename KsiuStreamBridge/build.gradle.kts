@@ -35,9 +35,16 @@ tasks {
     }
 
     processResources {
-        val props = mapOf("version" to version)
-        filesMatching("plugin.yml") {
-            expand(props)
+        val props =
+            mapOf(
+                "version" to version
+            )
+        filesMatching(
+            "plugin.yml"
+        ) {
+            expand(
+                props
+            )
         }
     }
 }

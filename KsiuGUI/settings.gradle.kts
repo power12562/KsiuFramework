@@ -1,2 +1,1 @@
-rootProject.name =
-    "KsiuGUI"
+rootProject.name = "KsiuGUI"

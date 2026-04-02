@@ -1,0 +1,7 @@
+name: KsiuStreamBridge
+version: '$version'
+
+main: com.ksiu.streambridge.KsiuStreamBridge
+api-version: '1.21.11'
+load: POSTWORLD
+depend: [KsiuCore]
