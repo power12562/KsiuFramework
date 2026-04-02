@@ -1,5 +1,6 @@
 package com.ksiu.gui.dialog;
 
+import com.ksiu.core.KsiuCore;
 import com.ksiu.gui.interfaces.ICancelEvent;
 import com.ksiu.gui.interfaces.IIntegerEvent;
 import com.ksiu.gui.interfaces.IStringEvent;
@@ -20,6 +21,18 @@ import java.util.List;
 
 public class DialogInputInteger extends DialogGUIBase
 {
+    public DialogInputInteger(String name, String label, IIntegerEvent outEvent)
+    {
+        super(name);
+        _label = label;
+        _outEvent = outEvent;
+        _failEvent = (player, value) ->
+        {
+            player.sendMessage(KsiuCore.getPrefixTextBuilder().append("정수만 입력 가능합니다.").build());
+        };
+        _cancelEvent = null;
+    }
+
     public DialogInputInteger(String name, String label, IIntegerEvent outEvent, IStringEvent failEvent)
     {
         super(name);
