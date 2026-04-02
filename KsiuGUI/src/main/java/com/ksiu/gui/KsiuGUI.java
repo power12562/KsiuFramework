@@ -5,6 +5,7 @@ import com.ksiu.core.builders.ItemBuilder;
 import com.ksiu.core.commands.base.CommandBase;
 import com.ksiu.core.commands.base.OpCommandBase;
 import com.ksiu.core.commands.container.KsiuCommandList;
+import com.ksiu.gui.dialog.DialogInputInteger;
 import com.ksiu.gui.dialog.DialogInputString;
 import com.ksiu.gui.manager.GUIListener;
 import com.ksiu.gui.manager.KsiuGUIStack;
@@ -213,24 +214,40 @@ public final class KsiuGUI extends JavaPlugin
 
     private static final class DialogTestGUI extends VirtualInventoryGUIBase
     {
-        private final DialogInputString _inputDialog;
+        private final DialogInputString _dialogString;
+        private final DialogInputInteger _dialogInteger;
 
         public DialogTestGUI(String name)
         {
             super(name, ESize.Size9, Component.text(name));
-            _inputDialog = new DialogInputString("문자열 입력 테스트 다이얼로그", "메시지", (player, message) ->
+            _dialogString = new DialogInputString("문자열 입력 테스트 다이얼로그", "메시지", (player, message) ->
             {
                 player.sendMessage(KsiuCore.getPrefixTextBuilder().append(message).build());
             });
 
-            setItem(1, ItemBuilder.newBuilder(Material.DIAMOND_BLOCK)
+            _dialogInteger = new DialogInputInteger("정수 입력 테스트 다이얼로그", "메시지", (player, number) ->
+            {
+                player.sendMessage(KsiuCore.getPrefixTextBuilder().append(String.valueOf(number)).build());
+            }, (player, string) ->
+            {
+                player.sendMessage(KsiuCore.getPrefixTextBuilder().append("정수만 입력 가능합니다.").build());
+            });
+
+            setItem(0, ItemBuilder.newBuilder(Material.COBBLESTONE)
                     .setName("문자열 입력해보기.")
                     .build(), event ->
             {
-                KsiuGUIStack.push((Player) event.getWhoClicked(), _inputDialog);
+                KsiuGUIStack.push((Player) event.getWhoClicked(), _dialogString);
             });
 
-            setItem(7, ItemBuilder.newBuilder(Material.REDSTONE_BLOCK)
+            setItem(1, new ItemBuilder(Material.IRON_BLOCK)
+                    .setName("정수 입력해보기.")
+                    .build(), event ->
+            {
+                KsiuGUIStack.push((Player) event.getWhoClicked(), _dialogInteger);
+            });
+
+            setItem(8, ItemBuilder.newBuilder(Material.REDSTONE_BLOCK)
                     .setName("나가기.")
                     .build(), event ->
             {
