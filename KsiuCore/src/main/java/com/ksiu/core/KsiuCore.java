@@ -7,7 +7,14 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.command.CommandMap;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.Properties;
 
 public final class KsiuCore extends JavaPlugin
 {
@@ -22,7 +29,47 @@ public final class KsiuCore extends JavaPlugin
 
     public static String getVersion()
     {
-        return "1.0.0";
+        return "1.0.1";
+    }
+
+    public static String getPropertiesPath()
+    {
+        return "Ksiu";
+    }
+
+    public static Properties readProperties(String fileName)
+    {
+        Properties prop = new Properties();
+        File file = new File(getPropertiesPath(), fileName + ".properties");
+        if (!file.exists())
+        {
+            return prop; // 파일이 없으면 빈 객체 반환
+        }
+
+        try (BufferedReader reader = Files.newBufferedReader(file.toPath(), StandardCharsets.UTF_8))
+        {
+            prop.load(reader);
+        }
+        catch (IOException ex)
+        {
+            prop.clear();
+            return prop;
+        }
+        return prop;
+    }
+
+    public static void writeProperties(String fileName, Properties prop) throws IOException
+    {
+        File dir = new File(getPropertiesPath());
+        if (!dir.exists())
+        {
+            dir.mkdirs(); // 폴더가 없으면 생성
+        }
+        File file = new File(dir, fileName + ".properties");
+        try (BufferedWriter writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8))
+        {
+            prop.store(writer, "Ksiu Configuration System - Last Updated: " + System.currentTimeMillis());
+        }
     }
 
     @Override
