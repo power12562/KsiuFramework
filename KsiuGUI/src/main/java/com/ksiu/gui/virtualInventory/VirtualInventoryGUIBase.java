@@ -101,9 +101,9 @@ public abstract class VirtualInventoryGUIBase implements IInventoryGUI, Inventor
     {
         _inventory.setItem(slot, item);
         if (action != null)
-        {
             _actions.put(slot, action);
-        }
+        else
+            _actions.remove(slot);
     }
 
     public final void removeItem(int slot)
