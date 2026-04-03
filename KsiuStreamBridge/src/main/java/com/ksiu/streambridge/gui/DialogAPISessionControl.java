@@ -19,9 +19,9 @@ public class DialogAPISessionControl extends DialogGUIBase
     private final IConfirmEvent _extendEvent;
     private final IConfirmEvent _clearEvent;
 
-    protected DialogAPISessionControl(IConfirmEvent extendEvent, IConfirmEvent clearEvent)
+    protected DialogAPISessionControl(String title, IConfirmEvent extendEvent, IConfirmEvent clearEvent)
     {
-        super("API 세션 관리");
+        super(title);
         _extendEvent = extendEvent;
         _clearEvent = clearEvent;
     }
@@ -33,7 +33,7 @@ public class DialogAPISessionControl extends DialogGUIBase
         {
             builder.empty()
                     .base(DialogBase.builder(Component.text(getName()))
-                            .canCloseWithEscape(true)
+                            .canCloseWithEscape(false)
                             .build())
                     .type(DialogType.confirmation(
                                     ActionButton.builder(Component.text("API 기간 연장", TextColor.color(0xAEFFC1)))
