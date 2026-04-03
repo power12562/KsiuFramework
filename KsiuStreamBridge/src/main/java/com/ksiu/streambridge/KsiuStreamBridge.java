@@ -147,8 +147,11 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
     {
         UUID uuid = player.getUniqueId();
         ChzzkToken token = _uuidByChzzkToken.remove(uuid);
-        token.revokeAccessToken();
-        token.revokeRefreshToken();
+        if (token != null)
+        {
+            token.revokeAccessToken();
+            token.revokeRefreshToken();
+        }
     }
 
     public void refreshChzzkToken(Player player)
@@ -175,7 +178,7 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
             });
             return null;
         }).orTimeout(5, TimeUnit.MINUTES);
-        
+
     }
 
     private void clearChzzkToken()
@@ -235,8 +238,42 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
             if (!(sender instanceof Player player))
                 return true;
 
-            KsiuGUIStack.push(player, new APIConnectorGUI());
+            Player target;
+            if (args.length == 0)
+            {
+                target = player;
+            }
+            else
+            {
+                target = Bukkit.getPlayer(args[0]);
+                if (target == null)
+                {
+                    sender.sendMessage(KsiuCore.getErrorTextBuilder().append("해당 플레이어를 찾을 수 없습니다: " + args[0]).build());
+                    return true;
+                }
+            }
+
+            KsiuGUIStack.push(target, new APIConnectorGUI());
             return true;
+        }
+
+        @Override
+        public List<String> onTabComplete(CommandSender sender, String[] args)
+        {
+            if (args.length == 1)
+            {
+                List<String> playerNames = new ArrayList<>();
+                String currentInput = args[0].toLowerCase();
+                for (Player player : Bukkit.getOnlinePlayers())
+                {
+                    if (player.getName().toLowerCase().startsWith(currentInput))
+                    {
+                        playerNames.add(player.getName());
+                    }
+                }
+                return playerNames;
+            }
+            return Collections.emptyList();
         }
     }
 
