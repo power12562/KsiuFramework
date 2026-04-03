@@ -1,6 +1,7 @@
 package com.ksiu.streambridge;
 
-import com.ksiu.commons.streamconnector.StreamConnector;
+import com.ksiu.commons.streamconnector.authorizer.ChzzkAuthorizer;
+import com.ksiu.commons.streamconnector.token.ChzzkToken;
 import com.ksiu.core.KsiuCore;
 import com.ksiu.core.commands.base.CommandBase;
 import com.ksiu.core.commands.base.OpCommandBase;
@@ -8,22 +9,24 @@ import com.ksiu.core.commands.container.KsiuCommandList;
 import com.ksiu.gui.KsiuGUI;
 import com.ksiu.gui.manager.KsiuGUIStack;
 import com.ksiu.streambridge.gui.APIConnectorGUI;
+import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
-public final class KsiuStreamBridge extends JavaPlugin
+public final class KsiuStreamBridge extends JavaPlugin implements Listener
 {
     private static KsiuStreamBridge instance;
     private final KsiuCommandList _commandList = new KsiuCommandList("streamBridge");
     private boolean _isValidChzzk;
-    private String _chzzkClientId;
-    private String _chzzkClientSecret;
-    private int _chzzkPort;
+    private ChzzkAuthorizer _chzzkAuthorizer;
 
     public static KsiuStreamBridge getInstance()
     {
@@ -44,25 +47,17 @@ public final class KsiuStreamBridge extends JavaPlugin
         }
         instance = this;
         _isValidChzzk = readChzzkProperties();
+        getServer().getPluginManager().registerEvents(this, this);
         _ksiuCore.getCommandRouter().registerCommandBundle("streamBridge", _commandList);
         _commandList.put(new VersionCommand());
         _commandList.put(new ConnectCommand());
         _commandList.put(new StreamConnectorCommand());
+        _commandList.put(new ReadPropertiesCommand());
     }
 
-    public final boolean isValidChzzk()
+    private final boolean isValidChzzk()
     {
         return _isValidChzzk;
-    }
-
-    public final String getChzzkClientId()
-    {
-        return _chzzkClientId;
-    }
-
-    public final String getChzzkClientSecret()
-    {
-        return _chzzkClientSecret;
     }
 
     private boolean readChzzkProperties()
@@ -84,30 +79,125 @@ public final class KsiuStreamBridge extends JavaPlugin
             getLogger().warning("Ksiu/chzzkAPI.properties 파일을 작성해주세요.");
             return false;
         }
-        _chzzkClientId = properties.getProperty("client_id");
-        if (_chzzkClientId == null || _chzzkClientId.startsWith("INPUT_YOUR"))
+        String chzzkClientId = properties.getProperty("client_id");
+        if (chzzkClientId == null || chzzkClientId.startsWith("INPUT_YOUR"))
             return false;
-        _chzzkClientSecret = properties.getProperty("client_secret");
-        if (_chzzkClientSecret == null || _chzzkClientSecret.startsWith("INPUT_YOUR"))
+        String chzzkClientSecret = properties.getProperty("client_secret");
+        if (chzzkClientSecret == null || chzzkClientSecret.startsWith("INPUT_YOUR"))
             return false;
         String portStr = properties.getProperty("port");
         if (portStr == null || portStr.startsWith("INPUT_YOUR"))
             return false;
+        int chzzkPort = 50500;
         try
         {
-            _chzzkPort = Integer.parseInt(portStr.trim());
+            chzzkPort = Integer.parseInt(portStr.trim());
         }
         catch (NumberFormatException ex)
         {
             return false;
         }
+        _chzzkAuthorizer = new ChzzkAuthorizer(chzzkClientId, chzzkClientSecret, chzzkPort);
         return true;
+    }
+
+    private final Map<UUID, ChzzkToken> _uuidByChzzkToken = new HashMap<>();
+
+    public void authorizerChzzk(Player player)
+    {
+        if (!isValidChzzk())
+        {
+            player.sendMessage(KsiuCore.getErrorTextBuilder().append("치지직 API가 비활성화 상태입니다. 관리자에게 문의하세요.").build());
+            return;
+        }
+
+        UUID uuid = player.getUniqueId();
+        if (_uuidByChzzkToken.containsKey(uuid))
+        {
+            player.sendMessage(KsiuCore.getPrefixTextBuilder().append("API가 이미 연동되었습니다.").build());
+            return;
+        }
+
+        player.sendMessage(KsiuCore.getPrefixTextBuilder().append("치지직 인증을 시작합니다...").build());
+        _chzzkAuthorizer.requestToken().thenAccept(newToken ->
+        {
+            Bukkit.getScheduler().runTask(this, () ->
+            {
+                player.sendMessage(KsiuCore.getPrefixTextBuilder().append("치지직 인증이 완료되었습니다.").build());
+                _uuidByChzzkToken.put(uuid, newToken);
+            });
+        }).exceptionally(ex ->
+        {
+            Bukkit.getScheduler().runTask(this, () ->
+            {
+                player.sendMessage(KsiuCore.getErrorTextBuilder().append("API 인증에 실패했습니다.").build());
+                player.sendMessage(KsiuCore.getErrorTextBuilder().append(ex.toString()).build());
+            });
+            return null;
+        }).orTimeout(5, TimeUnit.MINUTES);
+    }
+
+    public boolean hasChzzkToken(Player player)
+    {
+        UUID uuid = player.getUniqueId();
+        return _uuidByChzzkToken.containsKey(uuid);
+    }
+
+    public void removeChzzkToken(Player player)
+    {
+        UUID uuid = player.getUniqueId();
+        ChzzkToken token = _uuidByChzzkToken.remove(uuid);
+        token.revokeAccessToken();
+        token.revokeRefreshToken();
+    }
+
+    public void refreshChzzkToken(Player player)
+    {
+        UUID uuid = player.getUniqueId();
+        ChzzkToken token = _uuidByChzzkToken.get(uuid);
+        if (token == null)
+            return;
+
+        player.sendMessage(KsiuCore.getPrefixTextBuilder().append("치지직 재인증을 시작합니다...").build());
+        _chzzkAuthorizer.refreshToken(token.getRefreshToken()).thenAccept(newToken ->
+        {
+            Bukkit.getScheduler().runTask(this, () ->
+            {
+                player.sendMessage(KsiuCore.getPrefixTextBuilder().append("치지직 재인증이 완료되었습니다.").build());
+                _uuidByChzzkToken.put(uuid, newToken);
+            });
+        }).exceptionally(ex ->
+        {
+            Bukkit.getScheduler().runTask(this, () ->
+            {
+                player.sendMessage(KsiuCore.getErrorTextBuilder().append("API 재인증에 실패했습니다.").build());
+                player.sendMessage(KsiuCore.getErrorTextBuilder().append(ex.toString()).build());
+            });
+            return null;
+        }).orTimeout(5, TimeUnit.MINUTES);
+        
+    }
+
+    private void clearChzzkToken()
+    {
+        _uuidByChzzkToken.forEach((uuid, token) ->
+        {
+            token.revokeAccessToken();
+            token.revokeRefreshToken();
+        });
+        _uuidByChzzkToken.clear();
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event)
+    {
+        removeChzzkToken(event.getPlayer());
     }
 
     @Override
     public void onDisable()
     {
-
+        clearChzzkToken();
     }
 
     private static final class VersionCommand extends CommandBase
@@ -181,7 +271,6 @@ public final class KsiuStreamBridge extends JavaPlugin
         {
             super(getModuleName(), "api 연동 패키지 명령어 입니다.");
             _ksiuCommandList = new KsiuCommandList(getModuleName());
-            _ksiuCommandList.put(new VersionCommand());
         }
 
         @Override
@@ -194,25 +283,6 @@ public final class KsiuStreamBridge extends JavaPlugin
         public List<String> onTabComplete(CommandSender sender, String[] args)
         {
             return _ksiuCommandList.onTabComplete(sender, args);
-        }
-
-        public static final class VersionCommand extends OpCommandBase
-        {
-            public VersionCommand()
-            {
-                super("version", "패키지 버전 정보입니다.");
-            }
-
-            @Override
-            public boolean onOpCommand(CommandSender sender, String[] args)
-            {
-                if (!(sender instanceof Player player))
-                    return true;
-
-                String version = StreamConnector.getVersion();
-                player.sendMessage(KsiuCore.getPrefixTextBuilder().append(version).build());
-                return true;
-            }
         }
     }
 }

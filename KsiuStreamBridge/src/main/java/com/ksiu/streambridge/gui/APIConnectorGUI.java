@@ -6,6 +6,7 @@ import com.ksiu.gui.dialog.DialogInputInteger;
 import com.ksiu.gui.dialog.DialogInputString;
 import com.ksiu.gui.manager.KsiuGUIStack;
 import com.ksiu.gui.virtualInventory.VirtualInventoryGUIBase;
+import com.ksiu.streambridge.KsiuStreamBridge;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -21,18 +22,23 @@ public class APIConnectorGUI extends VirtualInventoryGUIBase
 
     public APIConnectorGUI()
     {
-        super("APIConnectorGUI", ESize.Size36, Component.text("API 연동하기"));
+        super("APIConnectorGUI", ESize.Size18, Component.text("API 연동하기"));
         //TODO: 숲 연동하기 버튼
         setItem(3, ItemBuilder.newBuilder(Material.LAPIS_BLOCK).setName("숲 연동하기").build(), null);
-        //TODO: 치지직 연동하기 버튼
-        setItem(5, ItemBuilder.newBuilder(Material.OBSIDIAN).setName("치지직 연동하기").build(), null);
+        setItem(5, ItemBuilder.newBuilder(Material.OBSIDIAN).setName("치지직 연동하기").build(), event ->
+        {
+            KsiuStreamBridge br = KsiuStreamBridge.getInstance();
+            Player player = (Player) event.getWhoClicked();
+            br.authorizerChzzk(player);
+            KsiuGUIStack.popOrClose(player, this);
+        });
 
         _dialogInteger = new DialogInputInteger("금액 설정하기", "금액", (player, value) ->
         {
             _amount = Integer.max(0, value);
         });
         // 금액 설정 버튼
-        setItem(3 + 18, ItemBuilder.newBuilder(Material.GOLD_BLOCK).setName("금액 설정하기").build(), event ->
+        setItem(3 + 9, ItemBuilder.newBuilder(Material.GOLD_BLOCK).setName("금액 설정하기").build(), event ->
         {
             KsiuGUIStack.push((Player) event.getWhoClicked(), _dialogInteger);
         });
@@ -42,28 +48,31 @@ public class APIConnectorGUI extends VirtualInventoryGUIBase
             _command = string.replaceFirst("^/", "");
         });
         // 명령어 설정 버튼
-        setItem(4 + 18, ItemBuilder.newBuilder(Material.COMMAND_BLOCK).setName("명령어 설정하기").build(), event ->
+        setItem(4 + 9, ItemBuilder.newBuilder(Material.COMMAND_BLOCK).setName("명령어 설정하기").build(), event ->
         {
             KsiuGUIStack.push((Player) event.getWhoClicked(), _dialogString);
         });
 
         //TODO: 적용 버튼
-        setItem(5 + 18, ItemBuilder.newBuilder(Material.ACACIA_LEAVES).setName("적용하기").build(), event ->
+        setItem(5 + 9, ItemBuilder.newBuilder(Material.ACACIA_LEAVES).setName("적용하기").build(), event ->
         {
             event.getWhoClicked().sendMessage(KsiuCore.getPrefixTextBuilder().append("금액: ").append(String.valueOf(_amount)).build());
             event.getWhoClicked().sendMessage(KsiuCore.getPrefixTextBuilder().append("명령어: ").append(_command).build());
         });
     }
 
-    public boolean IsConnect(Player player)
+    public boolean isConnectChzzk(Player player)
     {
-        return false;
+        KsiuStreamBridge sb = KsiuStreamBridge.getInstance();
+        if (sb == null)
+            return false;
+
+        return sb.hasChzzkToken(player);
     }
 
-    public ItemStack getConnectedItem(Player player)
+    public ItemStack getConnectedItem(Player player, boolean isConnect)
     {
         //TODO:API 연동 여부에 따라 에메랄드블록/레드스톤블록
-        boolean isConnect = IsConnect(player);
         ItemBuilder builder = ItemBuilder.newBuilder(isConnect ? Material.EMERALD_BLOCK : Material.REDSTONE_BLOCK);
         builder.setName(isConnect ? "API 연동중입니다." : "API를 연동해주세요.");
         return builder.build();
@@ -72,8 +81,20 @@ public class APIConnectorGUI extends VirtualInventoryGUIBase
     @Override
     public void onOpen(InventoryOpenEvent event)
     {
-        ItemStack item = getConnectedItem((Player) event.getPlayer());
-        setItem(0, item, null);
-        setItem(8, item, null);
+        KsiuStreamBridge sb = KsiuStreamBridge.getInstance();
+        Player player = (Player) event.getPlayer();
+        //TODO: 이후 SOOP 여부로 바꿔야함
+        setItem(0, getConnectedItem(player, false), null);
+
+        setItem(8, getConnectedItem(player, isConnectChzzk(player)), clickEvent ->
+        {
+            KsiuGUIStack.push(player, new DialogAPISessionControl(extend ->
+            {
+                sb.refreshChzzkToken(player);
+            }, clear ->
+            {
+                sb.removeChzzkToken(player);
+            }));
+        });
     }
 }
