@@ -33,7 +33,9 @@ tasks {
     shadowJar {
         relocate("com.ksiu.commons", "$mainPackage.shadow.commons")
     }
-
+    jar {
+        enabled = false
+    }
     runServer {
         // Configure the Minecraft version for our task.
         // This is the only required configuration besides applying the plugin.
