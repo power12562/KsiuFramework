@@ -12,11 +12,18 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.IOException;
 import java.util.List;
+import java.util.Properties;
 
 public final class KsiuStreamBridge extends JavaPlugin
 {
     private static KsiuStreamBridge instance;
+    private final KsiuCommandList _commandList = new KsiuCommandList("streamBridge");
+    private boolean _isValidChzzk;
+    private String _chzzkClientId;
+    private String _chzzkClientSecret;
+    private int _chzzkPort;
 
     public static KsiuStreamBridge getInstance()
     {
@@ -24,9 +31,6 @@ public final class KsiuStreamBridge extends JavaPlugin
     }
 
     public static final String VERSION = "1.0.0";
-
-    private final KsiuCommandList _commandList = new KsiuCommandList("streamBridge");
-    ;
 
     @Override
     public void onEnable()
@@ -39,10 +43,65 @@ public final class KsiuStreamBridge extends JavaPlugin
             return;
         }
         instance = this;
+        _isValidChzzk = readChzzkProperties();
         _ksiuCore.getCommandRouter().registerCommandBundle("streamBridge", _commandList);
         _commandList.put(new VersionCommand());
         _commandList.put(new ConnectCommand());
         _commandList.put(new StreamConnectorCommand());
+    }
+
+    public final boolean isValidChzzk()
+    {
+        return _isValidChzzk;
+    }
+
+    public final String getChzzkClientId()
+    {
+        return _chzzkClientId;
+    }
+
+    public final String getChzzkClientSecret()
+    {
+        return _chzzkClientSecret;
+    }
+
+    private boolean readChzzkProperties()
+    {
+        Properties properties = KsiuCore.readProperties("chzzkAPI");
+        if (properties.isEmpty())
+        {
+            properties.setProperty("client_id", "INPUT_YOUR_ID_HERE");
+            properties.setProperty("client_secret", "INPUT_YOUR_SECRET_HERE");
+            properties.setProperty("port", "INPUT_YOUR_PORT_HERE");
+            try
+            {
+                KsiuCore.writeProperties("chzzkAPI", properties);
+            }
+            catch (IOException ex)
+            {
+                getLogger().warning("[Ksiu:StreamBridge]" + ex.toString());
+            }
+            getLogger().warning("Ksiu/chzzkAPI.properties 파일을 작성해주세요.");
+            return false;
+        }
+        _chzzkClientId = properties.getProperty("client_id");
+        if (_chzzkClientId == null || _chzzkClientId.startsWith("INPUT_YOUR"))
+            return false;
+        _chzzkClientSecret = properties.getProperty("client_secret");
+        if (_chzzkClientSecret == null || _chzzkClientSecret.startsWith("INPUT_YOUR"))
+            return false;
+        String portStr = properties.getProperty("port");
+        if (portStr == null || portStr.startsWith("INPUT_YOUR"))
+            return false;
+        try
+        {
+            _chzzkPort = Integer.parseInt(portStr.trim());
+        }
+        catch (NumberFormatException ex)
+        {
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -87,6 +146,24 @@ public final class KsiuStreamBridge extends JavaPlugin
                 return true;
 
             KsiuGUIStack.push(player, new APIConnectorGUI());
+            return true;
+        }
+    }
+
+    private static final class ReadPropertiesCommand extends OpCommandBase
+    {
+        public ReadPropertiesCommand()
+        {
+            super("readproperties", "프로퍼티 파일을 다시 읽습니다.");
+        }
+
+        @Override
+        public boolean onOpCommand(CommandSender sender, String[] args)
+        {
+            KsiuStreamBridge sb = KsiuStreamBridge.getInstance();
+            if (sb == null)
+                return true;
+            sb.readChzzkProperties();
             return true;
         }
     }
