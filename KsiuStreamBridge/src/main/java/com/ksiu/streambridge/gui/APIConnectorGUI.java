@@ -25,13 +25,6 @@ public class APIConnectorGUI extends VirtualInventoryGUIBase
         super("APIConnectorGUI", ESize.Size18, Component.text("API 연동하기"));
         //TODO: 숲 연동하기 버튼
         setItem(3, ItemBuilder.newBuilder(Material.LAPIS_BLOCK).setName("숲 연동하기").build(), null);
-        setItem(5, ItemBuilder.newBuilder(Material.OBSIDIAN).setName("치지직 연동하기").build(), event ->
-        {
-            KsiuStreamBridge br = KsiuStreamBridge.getInstance();
-            Player player = (Player) event.getWhoClicked();
-            br.authorizerChzzk(player);
-            KsiuGUIStack.popOrClose(player, this);
-        });
 
         _dialogInteger = new DialogInputInteger("금액 설정하기", "금액", (player, value) ->
         {
@@ -86,15 +79,22 @@ public class APIConnectorGUI extends VirtualInventoryGUIBase
         //TODO: 이후 SOOP 여부로 바꿔야함
         setItem(0, getConnectedItem(player, false), null);
 
-        setItem(8, getConnectedItem(player, isConnectChzzk(player)), clickEvent ->
+        boolean isConnectChzzk = isConnectChzzk(player);
+        setItem(5, ItemBuilder.newBuilder(Material.OBSIDIAN).setName("치지직 연동하기").build(), !isConnectChzzk ? clickEvent ->
         {
-            KsiuGUIStack.push(player, new DialogAPISessionControl(extend ->
+            KsiuStreamBridge br = KsiuStreamBridge.getInstance();
+            br.authorizerChzzk(player);
+            KsiuGUIStack.popOrClose(player, this);
+        } : null);
+        setItem(8, getConnectedItem(player, isConnectChzzk), isConnectChzzk ? clickEvent ->
+        {
+            KsiuGUIStack.push(player, new DialogAPISessionControl("치지직 API", extend ->
             {
                 sb.refreshChzzkToken(player);
             }, clear ->
             {
                 sb.removeChzzkToken(player);
             }));
-        });
+        } : null);
     }
 }
