@@ -23,9 +23,9 @@ public class APIConnectorGUI extends VirtualInventoryGUIBase
     {
         super("APIConnectorGUI", ESize.Size36, Component.text("API 연동하기"));
         //TODO: 숲 연동하기 버튼
-        setItem(2, ItemBuilder.newBuilder(Material.LAPIS_BLOCK).setName("숲 연동하기").build(), null);
+        setItem(3, ItemBuilder.newBuilder(Material.LAPIS_BLOCK).setName("숲 연동하기").build(), null);
         //TODO: 치지직 연동하기 버튼
-        setItem(6, ItemBuilder.newBuilder(Material.OBSIDIAN).setName("치지직 연동하기").build(), null);
+        setItem(5, ItemBuilder.newBuilder(Material.OBSIDIAN).setName("치지직 연동하기").build(), null);
 
         _dialogInteger = new DialogInputInteger("금액 설정하기", "금액", (player, value) ->
         {
