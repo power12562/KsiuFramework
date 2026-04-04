@@ -51,7 +51,6 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
         _ksiuCore.getCommandRouter().registerCommandBundle("streamBridge", _commandList);
         _commandList.put(new VersionCommand());
         _commandList.put(new ConnectCommand());
-        _commandList.put(new StreamConnectorCommand());
         _commandList.put(new ReadPropertiesCommand());
     }
 
@@ -98,6 +97,9 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
             return false;
         }
         _chzzkAuthorizer = new ChzzkAuthorizer(chzzkClientId, chzzkClientSecret, chzzkPort);
+
+        //TODO: Session 관리 추가 필요
+
         return true;
     }
 
@@ -295,31 +297,4 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
         }
     }
 
-    private static final class StreamConnectorCommand extends OpCommandBase
-    {
-        public static String getModuleName()
-        {
-            return "streamconnector";
-        }
-
-        private final KsiuCommandList _ksiuCommandList;
-
-        public StreamConnectorCommand()
-        {
-            super(getModuleName(), "api 연동 패키지 명령어 입니다.");
-            _ksiuCommandList = new KsiuCommandList(getModuleName());
-        }
-
-        @Override
-        public boolean onOpCommand(CommandSender sender, String[] args)
-        {
-            return _ksiuCommandList.onCommand(sender, args);
-        }
-
-        @Override
-        public List<String> onTabComplete(CommandSender sender, String[] args)
-        {
-            return _ksiuCommandList.onTabComplete(sender, args);
-        }
-    }
 }
