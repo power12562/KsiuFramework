@@ -239,6 +239,44 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
                 player.sendMessage(KsiuCore.getPrefixTextBuilder().append("치지직 인증이 완료되었습니다.").build());
                 _uuidByChzzkToken.put(uuid, newToken);
                 _chzzkChannelIdByPlayerUID.put(newToken.getChannelId(), uuid);
+
+                // 후원 이벤트 설정
+                JSONObject settings = _chzzkChannelIdByJsonSettings.get(newToken.getChannelId());
+                ChzzkSessionManager.getSession(newToken).thenAccept(session ->
+                {
+                    if (settings != null)
+                    {
+                        try
+                        {
+                            JSONObject donationSettings = settings.getJSONObject(DONATION_SETTINGS_KEY);
+                            DonationCommandExecutor commandExecutor = new DonationCommandExecutor(donationSettings);
+                            session.subscribeDonationEvent(newToken, commandExecutor, throwable ->
+                            {
+                                Bukkit.getScheduler().runTask(this, () ->
+                                {
+                                    player.sendMessage(KsiuCore.getErrorTextBuilder().append("후원 API 연동에 실패했습니다. 관리자를 호출해주세요.").build());
+                                });
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            session.subscribeDonationEvent(newToken, _chzzkDefaultDonationCommands, throwable ->
+                            {
+                                Bukkit.getScheduler().runTask(this, () ->
+                                {
+                                    player.sendMessage(KsiuCore.getErrorTextBuilder().append("후원 API 연동에 실패했습니다. 관리자를 호출해주세요.").build());
+                                });
+                            });
+                        }
+                    }
+                }).exceptionally(throwable ->
+                {
+                    Bukkit.getScheduler().runTask(this, () ->
+                    {
+                        getLogger().warning("[Ksiu:StreamBridge] 세션 연동에 실패했습니다.");
+                    });
+                    return null;
+                });
             });
         }).exceptionally(ex ->
         {

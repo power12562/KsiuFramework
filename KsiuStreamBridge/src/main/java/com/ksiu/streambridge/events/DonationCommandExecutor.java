@@ -19,6 +19,11 @@ public class DonationCommandExecutor implements IDonationEvent
         _executeCommands = new TreeMap<>();
     }
 
+    public DonationCommandExecutor(JSONObject jsonCommands)
+    {
+        deserializeFromJson(jsonCommands);
+    }
+
     public DonationCommandExecutor(TreeMap<String, String> commands)
     {
         setExecuteCommands(commands);
