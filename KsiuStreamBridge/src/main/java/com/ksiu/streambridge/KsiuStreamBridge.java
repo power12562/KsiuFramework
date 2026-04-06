@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.ksiu.commons.shadow.org.json.JSONObject;
 import com.ksiu.commons.streamconnector.chzzk.authorizer.ChzzkAuthorizer;
 import com.ksiu.commons.streamconnector.chzzk.session.ChzzkSessionManager;
+import com.ksiu.commons.streamconnector.chzzk.session.interfaces.session.IDonationEvent;
 import com.ksiu.commons.streamconnector.chzzk.token.ChzzkToken;
 import com.ksiu.core.KsiuCore;
 import com.ksiu.core.commands.base.CommandBase;
@@ -12,7 +13,10 @@ import com.ksiu.core.commands.container.KsiuCommandList;
 import com.ksiu.gui.KsiuGUI;
 import com.ksiu.gui.manager.KsiuGUIStack;
 import com.ksiu.streambridge.events.DonationCommandExecutor;
+import com.ksiu.streambridge.events.SessionSubscribeEvent;
+import com.ksiu.streambridge.events.SessionUnsubscribeEvent;
 import com.ksiu.streambridge.gui.APIConnectorGUI;
+import com.ksiu.streambridge.settings.ChzzkJsonSettings;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -52,12 +56,17 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
             return;
         }
         instance = this;
-        readChzzkProperties();
+
         getServer().getPluginManager().registerEvents(this, this);
         _ksiuCore.getCommandRouter().registerCommandBundle("streamBridge", _commandList);
         _commandList.put(new VersionCommand());
         _commandList.put(new ConnectCommand());
         _commandList.put(new ReadPropertiesCommand());
+
+        readChzzkProperties();
+        ChzzkSessionManager.setSessionSubscribeEvent(new SessionSubscribeEvent());
+        ChzzkSessionManager.setSessionUnsubscribeEvent(new SessionUnsubscribeEvent());
+        ChzzkSessionManager.setSessionRevokedSubscribeEvent(new SessionUnsubscribeEvent());
     }
 
     private final boolean isValidChzzk()
@@ -114,19 +123,72 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
             return;
         }
         _chzzkAuthorizer = new ChzzkAuthorizer(chzzkClientId, chzzkClientSecret, chzzkPort);
-        ChzzkSessionManager.initialize(chzzkClientId, chzzkClientSecret);
         clearChzzkToken();
         readChzzkJsonSettings();
+        ChzzkSessionManager.initialize(chzzkClientId, chzzkClientSecret);
         _isValidChzzk = true;
+    }
+
+    public ChzzkJsonSettings getChzzkJsonSettings()
+    {
+        return new ChzzkJsonSettings(_chzzkChannelIdByJsonSettings.get(DEFAULT_SETTINGS_KEY));
+    }
+
+    public ChzzkJsonSettings getChzzkJsonSettings(ChzzkToken token)
+    {
+        return new ChzzkJsonSettings(_chzzkChannelIdByJsonSettings.get(token.getChannelId()));
+    }
+
+    public void setChzzkJsonSettings(ChzzkToken token, ChzzkJsonSettings settings)
+    {
+        String channelId = token.getChannelId();
+        if (channelId.equals(DEFAULT_SETTINGS_KEY))
+            return;
+
+        settings.getJsonRoot().put("channelName", token.getChannelName());
+        _chzzkChannelIdByJsonSettings.put(channelId, settings.getJsonRoot());
+        DonationEvent event = _chzzkChannelIdByDonationEvent.get(channelId);
+        try
+        {
+            event.setExecutor(new DonationCommandExecutor(settings.getDonationSettings()));
+            //TODO:채팅 및 구독도 필요하면 추가
+        }
+        catch (Exception ex)
+        {
+            getLogger().warning("setChzzkJsonSettings()에 알수 없는 채널이 들어왔습니다.");
+        }
     }
 
     private final Map<String, JSONObject> _chzzkChannelIdByJsonSettings = new TreeMap<>();
     private static final String CHZZK_JSON_SETTINGS_FILE_NAME = "chzzkAPI.json";
-    private static final String DEFAULT_SETTINGS_KEY = "default";
-    private static final String CHAT_SETTINGS_KEY = "chat";
-    private static final String DONATION_SETTINGS_KEY = "donation";
-    private static final String SUBSCRIPTION_SETTINGS_KEY = "subscription";
+    public static final String DEFAULT_SETTINGS_KEY = "default";
+    public static final String CHAT_SETTINGS_KEY = "chat";
+    public static final String DONATION_SETTINGS_KEY = "donation";
+    public static final String SUBSCRIPTION_SETTINGS_KEY = "subscription";
     private final DonationCommandExecutor _chzzkDefaultDonationCommands = new DonationCommandExecutor();
+
+    private static class DonationEvent implements IDonationEvent
+    {
+        private DonationCommandExecutor _executer;
+
+        public void setExecutor(DonationCommandExecutor executor)
+        {
+            _executer = executor;
+        }
+
+        public DonationEvent(DonationCommandExecutor executor)
+        {
+            setExecutor(executor);
+        }
+
+        @Override
+        public void execute(JSONObject jsonObject)
+        {
+            _executer.execute(jsonObject);
+        }
+    }
+
+    private final Map<String, DonationEvent> _chzzkChannelIdByDonationEvent = new HashMap<>();
 
     private void readChzzkJsonSettings()
     {
@@ -159,17 +221,13 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
         }
         else
         {
-            JSONObject defaultSettings = new JSONObject();
-            JSONObject defaultDonationSettings = new JSONObject();
-
+            ChzzkJsonSettings jsonSettings = new ChzzkJsonSettings();
             String defaultCommand = "msg %player% %donator% 님이 %player% 님에게 천원 펀치!";
-            defaultDonationSettings.put("1000", defaultCommand);
-            defaultSettings.put(DONATION_SETTINGS_KEY, defaultDonationSettings);
-
+            jsonSettings.getDonationSettings().put("1000", defaultCommand);
             TreeMap<String, String> executeCommands = new TreeMap<>();
             executeCommands.put("1000", defaultCommand);
             _chzzkDefaultDonationCommands.setExecuteCommands(executeCommands);
-            _chzzkChannelIdByJsonSettings.put(DEFAULT_SETTINGS_KEY, defaultSettings);
+            _chzzkChannelIdByJsonSettings.put(DEFAULT_SETTINGS_KEY, jsonSettings.getJsonRoot());
             writeChzzkJsonSettings();
         }
     }
@@ -243,36 +301,43 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
             {
                 player.sendMessage(KsiuCore.getPrefixTextBuilder().append("치지직 인증이 완료되었습니다.").build());
                 _uuidByChzzkToken.put(uuid, newToken);
-                _chzzkChannelIdByPlayerUID.put(newToken.getChannelId(), uuid);
+                final String channelId = newToken.getChannelId();
+                _chzzkChannelIdByPlayerUID.put(channelId, uuid);
 
-                // 후원 이벤트 설정
-                JSONObject settings = _chzzkChannelIdByJsonSettings.get(newToken.getChannelId());
+                // 치지직 이벤트 설정
+                JSONObject settings = _chzzkChannelIdByJsonSettings.get(channelId);
                 ChzzkSessionManager.getSession(newToken).thenAccept(session ->
                 {
-                    if (settings != null)
+                    final String channelName = newToken.getChannelName();
+                    try
                     {
-                        try
+                        JSONObject donationSettings = settings.getJSONObject(DONATION_SETTINGS_KEY);
+                        DonationEvent event = new DonationEvent(new DonationCommandExecutor(donationSettings));
+                        session.subscribeDonationEvent(newToken, event, throwable ->
                         {
-                            JSONObject donationSettings = settings.getJSONObject(DONATION_SETTINGS_KEY);
-                            DonationCommandExecutor commandExecutor = new DonationCommandExecutor(donationSettings);
-                            session.subscribeDonationEvent(newToken, commandExecutor, throwable ->
+                            Bukkit.getScheduler().runTask(this, () ->
                             {
-                                Bukkit.getScheduler().runTask(this, () ->
-                                {
-                                    player.sendMessage(KsiuCore.getErrorTextBuilder().append("후원 API 연동에 실패했습니다. 관리자를 호출해주세요.").build());
-                                });
+                                player.sendMessage(KsiuCore.getErrorTextBuilder().append("후원 API 연동에 실패했습니다. 관리자를 호출해주세요.").build());
                             });
-                        }
-                        catch (Exception ex)
+                        });
+                        _chzzkChannelIdByDonationEvent.put(channelId, event);
+                        getLogger().info(String.format("%s 채널 구독 이벤트 개별 설정.", channelName));
+
+                        //TODO:채팅 및 구독도 필요하면 추가
+                    }
+                    catch (Exception ex)
+                    {
+                        DonationEvent event = new DonationEvent(_chzzkDefaultDonationCommands);
+                        session.subscribeDonationEvent(newToken, event, throwable ->
                         {
-                            session.subscribeDonationEvent(newToken, _chzzkDefaultDonationCommands, throwable ->
+                            Bukkit.getScheduler().runTask(this, () ->
                             {
-                                Bukkit.getScheduler().runTask(this, () ->
-                                {
-                                    player.sendMessage(KsiuCore.getErrorTextBuilder().append("후원 API 연동에 실패했습니다. 관리자를 호출해주세요.").build());
-                                });
+                                player.sendMessage(KsiuCore.getErrorTextBuilder().append("후원 API 연동에 실패했습니다. 관리자를 호출해주세요.").build());
                             });
-                        }
+                        });
+                        _chzzkChannelIdByDonationEvent.put(channelId, event);
+                        getLogger().info(String.format("%s 채널 구독 이벤트 기본 설정.", channelName));
+                        //TODO:채팅 및 구독도 필요하면 추가
                     }
                 }).exceptionally(throwable ->
                 {
@@ -292,6 +357,12 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
             });
             return null;
         }).orTimeout(5, TimeUnit.MINUTES);
+    }
+
+    public ChzzkToken getChzzkToken(Player player)
+    {
+        UUID uuid = player.getUniqueId();
+        return _uuidByChzzkToken.get(uuid);
     }
 
     public boolean hasChzzkToken(Player player)

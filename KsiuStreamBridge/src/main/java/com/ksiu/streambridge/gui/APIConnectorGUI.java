@@ -1,5 +1,7 @@
 package com.ksiu.streambridge.gui;
 
+import com.ksiu.commons.shadow.org.json.JSONObject;
+import com.ksiu.commons.streamconnector.chzzk.token.ChzzkToken;
 import com.ksiu.core.KsiuCore;
 import com.ksiu.core.builders.ItemBuilder;
 import com.ksiu.gui.dialog.DialogInputInteger;
@@ -7,6 +9,7 @@ import com.ksiu.gui.dialog.DialogInputString;
 import com.ksiu.gui.manager.KsiuGUIStack;
 import com.ksiu.gui.virtualInventory.VirtualInventoryGUIBase;
 import com.ksiu.streambridge.KsiuStreamBridge;
+import com.ksiu.streambridge.settings.ChzzkJsonSettings;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -30,27 +33,9 @@ public class APIConnectorGUI extends VirtualInventoryGUIBase
         {
             _amount = Integer.max(0, value);
         });
-        // 금액 설정 버튼
-        setItem(3 + 9, ItemBuilder.newBuilder(Material.GOLD_BLOCK).setName("금액 설정하기").build(), event ->
-        {
-            KsiuGUIStack.push((Player) event.getWhoClicked(), _dialogInteger);
-        });
-
         _dialogString = new DialogInputString("명령어 설정하기", "명령어", (player, string) ->
         {
             _command = string.replaceFirst("^/", "");
-        });
-        // 명령어 설정 버튼
-        setItem(4 + 9, ItemBuilder.newBuilder(Material.COMMAND_BLOCK).setName("명령어 설정하기").build(), event ->
-        {
-            KsiuGUIStack.push((Player) event.getWhoClicked(), _dialogString);
-        });
-
-        //TODO: 적용 버튼
-        setItem(5 + 9, ItemBuilder.newBuilder(Material.ACACIA_LEAVES).setName("적용하기").build(), event ->
-        {
-            event.getWhoClicked().sendMessage(KsiuCore.getPrefixTextBuilder().append("금액: ").append(String.valueOf(_amount)).build());
-            event.getWhoClicked().sendMessage(KsiuCore.getPrefixTextBuilder().append("명령어: ").append(_command).build());
         });
     }
 
@@ -96,5 +81,97 @@ public class APIConnectorGUI extends VirtualInventoryGUIBase
                 sb.removeChzzkToken(player);
             }));
         } : null);
+
+        // 금액 설정 버튼
+        updateAmountButton(player);
+        // 명령어 설정 버튼
+        updateCommandButton(player);
+        //적용하기 버튼
+        updateApplyButton(player);
     }
+
+    private void updateAmountButton(Player player)
+    {
+        KsiuStreamBridge sb = KsiuStreamBridge.getInstance();
+        ChzzkToken token = sb.getChzzkToken(player);
+        if (token == null)
+        {
+            setItem(4 + 9, null, null);
+        }
+        else
+        {
+            setItem(3 + 9, ItemBuilder.newBuilder(Material.GOLD_BLOCK).setName("금액 설정하기")
+                    .addLore(String.format("가격: %d", _amount))
+                    .build(), clickEvent ->
+            {
+                KsiuGUIStack.push((Player) clickEvent.getWhoClicked(), _dialogInteger);
+            });
+        }
+    }
+
+    private void updateCommandButton(Player player)
+    {
+        KsiuStreamBridge sb = KsiuStreamBridge.getInstance();
+        ChzzkToken token = sb.getChzzkToken(player);
+        if (token == null)
+        {
+            setItem(4 + 9, null, null);
+        }
+        else
+        {
+            try
+            {
+                ChzzkJsonSettings settings = sb.getChzzkJsonSettings(token);
+                String prevCommand = "null";
+                if (settings.getDonationSettings().isEmpty())
+                {
+                    settings = sb.getChzzkJsonSettings();
+                }
+                JSONObject donationObject = settings.getDonationSettings();
+                String amount = String.valueOf(_amount);
+                if (donationObject.has(amount))
+                {
+                    prevCommand = donationObject.getString(amount);
+                }
+                setItem(4 + 9, ItemBuilder.newBuilder(Material.COMMAND_BLOCK).setName("명령어 설정하기")
+                        .addLore(String.format("기존 명령어: %s", prevCommand))
+                        .build(), clickEvent ->
+                {
+                    KsiuGUIStack.push((Player) clickEvent.getWhoClicked(), _dialogString);
+                });
+            }
+            catch (Exception ex)
+            {
+                setItem(4 + 9, null, null);
+            }
+        }
+    }
+
+    private void updateApplyButton(Player player)
+    {
+        final KsiuStreamBridge sb = KsiuStreamBridge.getInstance();
+        final ChzzkToken token = sb.getChzzkToken(player);
+        if (token == null)
+        {
+            setItem(4 + 9, null, null);
+        }
+        else
+        {
+            String amountInfo = String.format("가격: %d", _amount);
+            String commandInfo = String.format("새로운 명령어: %s", _command);
+            ItemStack item = ItemBuilder.newBuilder(Material.ACACIA_LEAVES)
+                    .setName("적용하기")
+                    .addLore(amountInfo)
+                    .addLore(commandInfo)
+                    .build();
+            setItem(5 + 9, item, clickEvent ->
+            {
+                ChzzkJsonSettings settings = sb.getChzzkJsonSettings(token);
+                settings.getDonationSettings().put(String.valueOf(_amount), _command);
+                sb.setChzzkJsonSettings(token, settings);
+            });
+            player.sendMessage(KsiuCore.getPrefixTextBuilder().append(String.format("(%s : %s) 적용되었습니다.", amountInfo, commandInfo)).build());
+        }
+    }
+
 }

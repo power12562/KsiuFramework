@@ -1,8 +1,8 @@
 package com.ksiu.streambridge.events;
 
 import com.ksiu.commons.shadow.org.json.JSONObject;
-import com.ksiu.commons.streamconnector.chzzk.session.interfaces.session.IDonationEvent;
 import com.ksiu.streambridge.KsiuStreamBridge;
+import com.ksiu.streambridge.events.interfaces.ICommandExecutor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 
-public class DonationCommandExecutor implements IDonationEvent
+public class DonationCommandExecutor implements ICommandExecutor
 {
     private Map<String, String> _executeCommands;
 
@@ -56,11 +56,13 @@ public class DonationCommandExecutor implements IDonationEvent
         }
     }
 
+    @Override
     public JSONObject serializeToJson()
     {
         return new JSONObject(_executeCommands);
     }
 
+    @Override
     public void deserializeFromJson(JSONObject json)
     {
         _executeCommands = new TreeMap<>();
