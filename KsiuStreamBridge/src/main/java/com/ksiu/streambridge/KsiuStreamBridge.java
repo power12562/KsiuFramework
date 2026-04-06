@@ -151,6 +151,7 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
         try
         {
             event.setExecutor(new DonationCommandExecutor(settings.getDonationSettings()));
+            getLogger().info("후원 이벤트 변경: " + settings);
             //TODO:채팅 및 구독도 필요하면 추가
         }
         catch (Exception ex)
@@ -423,6 +424,7 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
     public void onQuit(PlayerQuitEvent event)
     {
         removeChzzkToken(event.getPlayer());
+        ChzzkSessionManager.
     }
 
     @Override
@@ -510,7 +512,7 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
     {
         public ReadPropertiesCommand()
         {
-            super("readproperties", "프로퍼티 파일을 다시 읽습니다.");
+            super("reload", "프로퍼티 파일을 다시 읽습니다. 모든 API 연동이 초기화됩니다.");
         }
 
         @Override
