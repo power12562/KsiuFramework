@@ -2,7 +2,6 @@ package com.ksiu.streambridge.gui;
 
 import com.ksiu.commons.shadow.org.json.JSONObject;
 import com.ksiu.commons.streamconnector.chzzk.token.ChzzkToken;
-import com.ksiu.core.KsiuCore;
 import com.ksiu.core.builders.ItemBuilder;
 import com.ksiu.gui.dialog.DialogInputInteger;
 import com.ksiu.gui.dialog.DialogInputString;
@@ -169,8 +168,8 @@ public class APIConnectorGUI extends VirtualInventoryGUIBase
                 ChzzkJsonSettings settings = sb.getChzzkJsonSettings(token);
                 settings.getDonationSettings().put(String.valueOf(_amount), _command);
                 sb.setChzzkJsonSettings(token, settings);
+                updateCommandButton(player);
             });
-            player.sendMessage(KsiuCore.getPrefixTextBuilder().append(String.format("(%s : %s) 적용되었습니다.", amountInfo, commandInfo)).build());
         }
     }
 
