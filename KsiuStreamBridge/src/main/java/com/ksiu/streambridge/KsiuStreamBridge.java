@@ -1,5 +1,6 @@
 package com.ksiu.streambridge;
 
+import com.google.gson.Gson;
 import com.ksiu.commons.shadow.org.json.JSONObject;
 import com.ksiu.commons.streamconnector.chzzk.authorizer.ChzzkAuthorizer;
 import com.ksiu.commons.streamconnector.chzzk.session.ChzzkSessionManager;
@@ -153,7 +154,7 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
             }
             catch (Exception ex)
             {
-                getLogger().warning("[Ksiu:StreamBridge] 잘못된" + CHZZK_JSON_SETTINGS_FILE_NAME + " 설정 파일입니다.");
+                getLogger().warning("잘못된" + CHZZK_JSON_SETTINGS_FILE_NAME + " 설정 파일입니다.");
             }
         }
         else
@@ -185,26 +186,30 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
             }
             catch (IOException e)
             {
-                getLogger().warning("[Ksiu:StreamBridge] 치지직 API 설정 파일 저장 실패.");
+                getLogger().warning("치지직 API 설정 파일 저장 실패.");
                 return;
             }
         }
 
         if (_chzzkChannelIdByJsonSettings.isEmpty())
         {
-            getLogger().warning("[Ksiu:StreamBridge] 치지직 API 설정이 존재하지 않습니다.");
+            getLogger().warning("치지직 API 설정이 존재하지 않습니다.");
             return;
         }
 
         try
         {
             JSONObject json = new JSONObject(_chzzkChannelIdByJsonSettings);
-            Files.writeString(path, json.toString(4));
-            getLogger().info("[Ksiu:StreamBridge] 치지직 API 설정이 성공적으로 저장되었습니다.");
+            String rawJson = json.toString();
+            Gson gson = new com.google.gson.GsonBuilder().setPrettyPrinting().create();
+            com.google.gson.JsonElement je = com.google.gson.JsonParser.parseString(rawJson);
+            String prettyJson = gson.toJson(je);
+            Files.writeString(path, prettyJson);
+            getLogger().info("치지직 API 설정이 성공적으로 저장되었습니다.");
         }
         catch (Exception ex)
         {
-            getLogger().warning("[Ksiu:StreamBridge] 치지직 API 설정 파일 저장 실패.");
+            getLogger().warning("치지직 API 설정 파일 저장 실패.");
         }
     }
 
@@ -273,7 +278,7 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
                 {
                     Bukkit.getScheduler().runTask(this, () ->
                     {
-                        getLogger().warning("[Ksiu:StreamBridge] 세션 연동에 실패했습니다.");
+                        getLogger().warning("세션 연동에 실패했습니다.");
                     });
                     return null;
                 });
