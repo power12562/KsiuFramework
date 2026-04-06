@@ -323,7 +323,6 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
                         });
                         _chzzkChannelIdByDonationEvent.put(channelId, event);
                         getLogger().info(String.format("%s 채널 구독 이벤트 개별 설정.", channelName));
-
                         //TODO:채팅 및 구독도 필요하면 추가
                     }
                     catch (Exception ex)
@@ -372,7 +371,7 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
         return _uuidByChzzkToken.containsKey(uuid);
     }
 
-    public void removeChzzkToken(Player player)
+    public ChzzkToken removeChzzkToken(Player player)
     {
         UUID uuid = player.getUniqueId();
         ChzzkToken token = _uuidByChzzkToken.remove(uuid);
@@ -381,6 +380,7 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
             _chzzkChannelIdByPlayerUID.remove(token.getChannelId());
             token.revoke();
         }
+        return token;
     }
 
     public void refreshChzzkToken(Player player)
@@ -423,8 +423,10 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
     @EventHandler
     public void onQuit(PlayerQuitEvent event)
     {
-        removeChzzkToken(event.getPlayer());
-        ChzzkSessionManager.
+        Player player = event.getPlayer();
+        ChzzkToken token = removeChzzkToken(player);
+        ChzzkSessionManager.remove(token);
+        //TODO 이후 SOOP도 추가 필요
     }
 
     @Override
