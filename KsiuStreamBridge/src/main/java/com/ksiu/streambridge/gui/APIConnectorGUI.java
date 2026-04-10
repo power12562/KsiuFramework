@@ -49,7 +49,6 @@ public class APIConnectorGUI extends VirtualInventoryGUIBase
 
     public ItemStack getConnectedItem(Player player, boolean isConnect)
     {
-        //TODO:API 연동 여부에 따라 에메랄드블록/레드스톤블록
         ItemBuilder builder = ItemBuilder.newBuilder(isConnect ? Material.EMERALD_BLOCK : Material.REDSTONE_BLOCK);
         builder.setName(isConnect ? "API 연동중입니다." : "API를 연동해주세요.");
         return builder.build();
@@ -68,7 +67,6 @@ public class APIConnectorGUI extends VirtualInventoryGUIBase
         {
             KsiuStreamBridge br = KsiuStreamBridge.getInstance();
             br.authorizerChzzk(player);
-            KsiuGUIStack.popOrClose(player, this);
         } : null);
         setItem(8, getConnectedItem(player, isConnectChzzk), isConnectChzzk ? clickEvent ->
         {
