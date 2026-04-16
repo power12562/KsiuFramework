@@ -1,4 +1,4 @@
-package com.ksiu.streambridge.events.interfaces;
+package com.ksiu.streambridge.events.chzzk.interfaces;
 
 import com.ksiu.commons.shadow.org.json.JSONObject;
 

@@ -1,4 +1,4 @@
-package com.ksiu.streambridge.events;
+package com.ksiu.streambridge.events.chzzk;
 
 import com.ksiu.commons.streamconnector.chzzk.session.interfaces.ISessionSubscribeEvent;
 import com.ksiu.streambridge.KsiuStreamBridge;

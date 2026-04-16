@@ -1,8 +1,8 @@
-package com.ksiu.streambridge.events;
+package com.ksiu.streambridge.events.chzzk;
 
 import com.ksiu.commons.shadow.org.json.JSONObject;
 import com.ksiu.streambridge.KsiuStreamBridge;
-import com.ksiu.streambridge.events.interfaces.ICommandExecutor;
+import com.ksiu.streambridge.events.chzzk.interfaces.ICommandExecutor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -52,7 +52,7 @@ public class DonationCommandExecutor implements ICommandExecutor
         }
         catch (Exception ex)
         {
-            sb.getLogger().warning("[Ksiu:StreamBridge] 잘못된 후원 이벤트 입니다.");
+            sb.getLogger().warning("잘못된 후원 이벤트 입니다.");
         }
     }
 
