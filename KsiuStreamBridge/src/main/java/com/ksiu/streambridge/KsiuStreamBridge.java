@@ -4,19 +4,23 @@ import com.google.gson.Gson;
 import com.ksiu.commons.shadow.org.json.JSONObject;
 import com.ksiu.commons.streamconnector.chzzk.authorizer.ChzzkAuthorizer;
 import com.ksiu.commons.streamconnector.chzzk.session.ChzzkSessionManager;
-import com.ksiu.commons.streamconnector.chzzk.session.interfaces.session.IDonationEvent;
 import com.ksiu.commons.streamconnector.chzzk.token.ChzzkToken;
+import com.ksiu.commons.streamconnector.soop.authorizer.SoopAuthorizer;
+import com.ksiu.commons.streamconnector.soop.session.SoopSession;
+import com.ksiu.commons.streamconnector.soop.token.SoopToken;
 import com.ksiu.core.KsiuCore;
 import com.ksiu.core.commands.base.CommandBase;
 import com.ksiu.core.commands.base.OpCommandBase;
 import com.ksiu.core.commands.container.KsiuCommandList;
 import com.ksiu.gui.KsiuGUI;
 import com.ksiu.gui.manager.KsiuGUIStack;
-import com.ksiu.streambridge.events.DonationCommandExecutor;
-import com.ksiu.streambridge.events.SessionSubscribeEvent;
-import com.ksiu.streambridge.events.SessionUnsubscribeEvent;
+import com.ksiu.streambridge.events.chzzk.ChzzkDonationEvent;
+import com.ksiu.streambridge.events.chzzk.DonationCommandExecutor;
+import com.ksiu.streambridge.events.chzzk.SessionSubscribeEvent;
+import com.ksiu.streambridge.events.chzzk.SessionUnsubscribeEvent;
+import com.ksiu.streambridge.events.soop.SoopDonationEvent;
 import com.ksiu.streambridge.gui.APIConnectorGUI;
-import com.ksiu.streambridge.settings.ChzzkJsonSettings;
+import com.ksiu.streambridge.settings.EventJsonSettings;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -24,11 +28,13 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 public final class KsiuStreamBridge extends JavaPlugin implements Listener
@@ -67,6 +73,9 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
         ChzzkSessionManager.setSessionSubscribeEvent(new SessionSubscribeEvent());
         ChzzkSessionManager.setSessionUnsubscribeEvent(new SessionUnsubscribeEvent());
         ChzzkSessionManager.setSessionRevokedSubscribeEvent(new SessionUnsubscribeEvent());
+
+        readSoopJsonSettings();
+        SoopSession.SetLogger(LoggerFactory.getLogger(KsiuStreamBridge.class));
     }
 
     private final boolean isValidChzzk()
@@ -129,17 +138,17 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
         _isValidChzzk = true;
     }
 
-    public ChzzkJsonSettings getChzzkJsonSettings()
+    public EventJsonSettings getChzzkEventSettings()
     {
-        return new ChzzkJsonSettings(_chzzkChannelIdByJsonSettings.get(DEFAULT_SETTINGS_KEY));
+        return new EventJsonSettings(_chzzkChannelIdByJsonSettings.get(DEFAULT_SETTINGS_KEY));
     }
 
-    public ChzzkJsonSettings getChzzkJsonSettings(ChzzkToken token)
+    public EventJsonSettings getChzzkEventSettings(ChzzkToken token)
     {
-        return new ChzzkJsonSettings(_chzzkChannelIdByJsonSettings.get(token.getChannelId()));
+        return new EventJsonSettings(_chzzkChannelIdByJsonSettings.get(token.getChannelId()));
     }
 
-    public void setChzzkJsonSettings(ChzzkToken token, ChzzkJsonSettings settings)
+    public void setChzzkEventSettings(ChzzkToken token, EventJsonSettings settings)
     {
         String channelId = token.getChannelId();
         if (channelId.equals(DEFAULT_SETTINGS_KEY))
@@ -147,11 +156,11 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
 
         settings.getJsonRoot().put("channelName", token.getChannelName());
         _chzzkChannelIdByJsonSettings.put(channelId, settings.getJsonRoot());
-        DonationEvent event = _chzzkChannelIdByDonationEvent.get(channelId);
+        ChzzkDonationEvent event = _chzzkChannelIdByDonationEvent.get(channelId);
         try
         {
             event.setExecutor(new DonationCommandExecutor(settings.getDonationSettings()));
-            getLogger().info("후원 이벤트 변경: " + settings);
+            getLogger().info("후원 이벤트 변경: " + settings.getDonationSettings().toString());
             //TODO:채팅 및 구독도 필요하면 추가
         }
         catch (Exception ex)
@@ -160,36 +169,11 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
         }
     }
 
+    private static final String DEFAULT_SETTINGS_KEY = "default";
     private final Map<String, JSONObject> _chzzkChannelIdByJsonSettings = new TreeMap<>();
     private static final String CHZZK_JSON_SETTINGS_FILE_NAME = "chzzkAPI.json";
-    public static final String DEFAULT_SETTINGS_KEY = "default";
-    public static final String CHAT_SETTINGS_KEY = "chat";
-    public static final String DONATION_SETTINGS_KEY = "donation";
-    public static final String SUBSCRIPTION_SETTINGS_KEY = "subscription";
     private final DonationCommandExecutor _chzzkDefaultDonationCommands = new DonationCommandExecutor();
-
-    private static class DonationEvent implements IDonationEvent
-    {
-        private DonationCommandExecutor _executer;
-
-        public void setExecutor(DonationCommandExecutor executor)
-        {
-            _executer = executor;
-        }
-
-        public DonationEvent(DonationCommandExecutor executor)
-        {
-            setExecutor(executor);
-        }
-
-        @Override
-        public void execute(JSONObject jsonObject)
-        {
-            _executer.execute(jsonObject);
-        }
-    }
-
-    private final Map<String, DonationEvent> _chzzkChannelIdByDonationEvent = new HashMap<>();
+    private final Map<String, ChzzkDonationEvent> _chzzkChannelIdByDonationEvent = new HashMap<>();
 
     private void readChzzkJsonSettings()
     {
@@ -207,7 +191,7 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
                 });
 
                 JSONObject defaultSettings = _chzzkChannelIdByJsonSettings.get(DEFAULT_SETTINGS_KEY);
-                JSONObject defaultDonationSettings = defaultSettings.getJSONObject(DONATION_SETTINGS_KEY);
+                JSONObject defaultDonationSettings = defaultSettings.getJSONObject(EventJsonSettings.DONATION_SETTINGS_KEY);
                 TreeMap<String, String> newCommands = new TreeMap<>();
                 defaultDonationSettings.keySet().forEach(key ->
                 {
@@ -222,7 +206,7 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
         }
         else
         {
-            ChzzkJsonSettings jsonSettings = new ChzzkJsonSettings();
+            EventJsonSettings jsonSettings = new EventJsonSettings();
             String defaultCommand = "msg %player% %donator% 님이 %player% 님에게 천원 펀치!";
             jsonSettings.getDonationSettings().put("1000", defaultCommand);
             TreeMap<String, String> executeCommands = new TreeMap<>();
@@ -260,9 +244,7 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
         {
             JSONObject json = new JSONObject(_chzzkChannelIdByJsonSettings);
             String rawJson = json.toString();
-            Gson gson = new com.google.gson.GsonBuilder().setPrettyPrinting().create();
-            com.google.gson.JsonElement je = com.google.gson.JsonParser.parseString(rawJson);
-            String prettyJson = gson.toJson(je);
+            String prettyJson = getPrettyJson(rawJson);
             Files.writeString(path, prettyJson);
             getLogger().info("치지직 API 설정이 성공적으로 저장되었습니다.");
         }
@@ -280,7 +262,7 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
         return _chzzkChannelIdByPlayerUID.get(channelId);
     }
 
-    public void authorizerChzzk(Player player)
+    public void authorizerChzzk(Player player, Runnable complete)
     {
         if (!isValidChzzk())
         {
@@ -304,6 +286,8 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
                 _uuidByChzzkToken.put(uuid, newToken);
                 final String channelId = newToken.getChannelId();
                 _chzzkChannelIdByPlayerUID.put(channelId, uuid);
+                if (complete != null)
+                    complete.run();
 
                 // 치지직 이벤트 설정
                 JSONObject settings = _chzzkChannelIdByJsonSettings.get(channelId);
@@ -312,8 +296,8 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
                     final String channelName = newToken.getChannelName();
                     try
                     {
-                        JSONObject donationSettings = settings.getJSONObject(DONATION_SETTINGS_KEY);
-                        DonationEvent event = new DonationEvent(new DonationCommandExecutor(donationSettings));
+                        JSONObject donationSettings = settings.getJSONObject(EventJsonSettings.DONATION_SETTINGS_KEY);
+                        ChzzkDonationEvent event = new ChzzkDonationEvent(new DonationCommandExecutor(donationSettings));
                         session.subscribeDonationEvent(newToken, event, throwable ->
                         {
                             Bukkit.getScheduler().runTask(this, () ->
@@ -327,7 +311,7 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
                     }
                     catch (Exception ex)
                     {
-                        DonationEvent event = new DonationEvent(_chzzkDefaultDonationCommands);
+                        ChzzkDonationEvent event = new ChzzkDonationEvent(_chzzkDefaultDonationCommands);
                         session.subscribeDonationEvent(newToken, event, throwable ->
                         {
                             Bukkit.getScheduler().runTask(this, () ->
@@ -420,13 +404,212 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
         _chzzkChannelIdByPlayerUID.clear();
     }
 
+    private static final String SOOP_JSON_SETTINGS_FILE_NAME = "soopAPI.json";
+    private final Map<String, JSONObject> _playerUIdBySoopEventSettings = new HashMap<>();
+    private final Map<UUID, SoopSession> _playerUIdBySoopSession = new HashMap<>();
+
+    public EventJsonSettings getSoopEventSettings()
+    {
+        return new EventJsonSettings(_playerUIdBySoopEventSettings.get(DEFAULT_SETTINGS_KEY));
+    }
+
+    public EventJsonSettings getSoopEventSettings(Player player)
+    {
+        return new EventJsonSettings(_playerUIdBySoopEventSettings.get(player.getUniqueId().toString()));
+    }
+
+    public void setSoopEventSettings(Player player, EventJsonSettings settings)
+    {
+        UUID playerUID = player.getUniqueId();
+        SoopSession session = _playerUIdBySoopSession.get(playerUID);
+        if (session == null)
+            return;
+
+        SoopToken token = session.getToken();
+        settings.getJsonRoot().put("bjName", token.getBJNickname());
+        _playerUIdBySoopEventSettings.put(playerUID.toString(), settings.getJsonRoot());
+        try
+        {
+            session.subscribeDonationEven(new SoopDonationEvent(playerUID, settings.getDonationSettings()));
+            getLogger().info("후원 이벤트 변경: " + settings.getDonationSettings().toString());
+        }
+        catch (Exception ex)
+        {
+            getLogger().warning("setSoopEventSettings()에 알수 없는 채널이 들어왔습니다.");
+        }
+    }
+
+
+    private void readSoopJsonSettings()
+    {
+        _playerUIdBySoopEventSettings.clear();
+        clearSoopSessions();
+
+        Path path = Path.of(KsiuCore.getPropertiesPath(), SOOP_JSON_SETTINGS_FILE_NAME);
+        if (Files.exists(path))
+        {
+            try
+            {
+                String content = Files.readString(path);
+                JSONObject jsonRoot = new JSONObject(content);
+                jsonRoot.keySet().forEach(uuid ->
+                {
+                    JSONObject settings = jsonRoot.getJSONObject(uuid);
+                    _playerUIdBySoopEventSettings.put(uuid, settings);
+                });
+            }
+            catch (Exception ex)
+            {
+                getLogger().warning("잘못된" + SOOP_JSON_SETTINGS_FILE_NAME + " 설정 파일입니다.");
+            }
+        }
+        else
+        {
+            EventJsonSettings jsonSettings = new EventJsonSettings();
+            String defaultCommand = "msg %player% %donator% 님이 %player% 님에게 천원 펀치!";
+            jsonSettings.getDonationSettings().put("1000", defaultCommand);
+            _playerUIdBySoopEventSettings.put(DEFAULT_SETTINGS_KEY, jsonSettings.getJsonRoot());
+            writeSoopJsonSettings();
+        }
+    }
+
+    private void writeSoopJsonSettings()
+    {
+        Path path = Path.of(KsiuCore.getPropertiesPath(), SOOP_JSON_SETTINGS_FILE_NAME);
+        Path parentDir = path.getParent();
+        if (parentDir != null && !Files.exists(parentDir))
+        {
+            try
+            {
+                Files.createDirectories(parentDir);
+            }
+            catch (IOException e)
+            {
+                getLogger().warning("숲 API 설정 파일 저장 실패.");
+                return;
+            }
+        }
+
+        if (_playerUIdBySoopEventSettings.isEmpty())
+        {
+            getLogger().warning("숲 API 설정이 존재하지 않습니다.");
+            return;
+        }
+
+        try
+        {
+            JSONObject json = new JSONObject(_playerUIdBySoopEventSettings);
+            String rawJson = json.toString();
+            String prettyJson = getPrettyJson(rawJson);
+            Files.writeString(path, prettyJson);
+            getLogger().info("숲 API 설정이 성공적으로 저장되었습니다.");
+        }
+        catch (Exception ex)
+        {
+            getLogger().warning("숲 API 설정 파일 저장 실패.");
+        }
+    }
+
+    private final SoopAuthorizer _soopAuthorizer = new SoopAuthorizer();
+
+    public void authorizerSoopSession(Player player, String soopBjId, Runnable complete)
+    {
+        if (hasSoopSession(player))
+        {
+            player.sendMessage(KsiuCore.getPrefixTextBuilder().append("API가 이미 연동되었습니다.").build());
+            return;
+        }
+
+        final UUID playerUID = player.getUniqueId();
+        player.sendMessage(KsiuCore.getPrefixTextBuilder().append("SOOP 인증을 시작합니다...").build());
+        CompletableFuture<SoopToken> tokenFuture = _soopAuthorizer.requestToken(soopBjId);
+        tokenFuture.thenAccept(token ->
+        {
+            CompletableFuture<SoopSession> sessionFuture = SoopSession.createSession(token);
+            sessionFuture.thenAccept(session ->
+            {
+                Bukkit.getScheduler().runTask(this, () ->
+                {
+                    try
+                    {
+                        JSONObject settingsRoot = _playerUIdBySoopEventSettings.get(playerUID.toString());
+                        if (settingsRoot != null)
+                        {
+                            getLogger().info(String.format("%s 채널 구독 이벤트 개별 설정.", soopBjId));
+                        }
+                        else
+                        {
+                            settingsRoot = _playerUIdBySoopEventSettings.get(DEFAULT_SETTINGS_KEY);
+                            getLogger().info(String.format("%s 채널 구독 이벤트 기본 설정.", soopBjId));
+                        }
+
+                        EventJsonSettings settings = new EventJsonSettings(settingsRoot);
+                        SoopDonationEvent donationEvent = new SoopDonationEvent(playerUID, settings.getDonationSettings());
+                        session.subscribeDonationEven(donationEvent);
+                        _playerUIdBySoopSession.put(playerUID, session);
+                        player.sendMessage(KsiuCore.getPrefixTextBuilder().append("SOOP 연동이 완료되었습니다.").build());
+
+                        if (complete != null)
+                            complete.run();
+                    }
+                    catch (Exception ex)
+                    {
+                        player.sendMessage(KsiuCore.getPrefixTextBuilder().append("SOOP 연동 실패: " + ex.getMessage()).build());
+                    }
+                });
+            }).exceptionally(throwable ->
+            {
+                Bukkit.getScheduler().runTask(this, () ->
+                {
+                    player.sendMessage(KsiuCore.getErrorTextBuilder().append(throwable.getMessage()).build());
+                });
+                return null;
+            });
+
+        }).exceptionally(throwable ->
+        {
+            Bukkit.getScheduler().runTask(this, () ->
+            {
+                player.sendMessage(KsiuCore.getErrorTextBuilder().append(throwable.getMessage()).build());
+            });
+            return null;
+        });
+    }
+
+    public boolean hasSoopSession(Player player)
+    {
+        return _playerUIdBySoopSession.containsKey(player.getUniqueId());
+    }
+
+    public void revokeSoopSession(Player player)
+    {
+        UUID playerUid = player.getUniqueId();
+        SoopSession session = _playerUIdBySoopSession.remove(playerUid);
+        if (session != null)
+        {
+            session.disconnect();
+        }
+    }
+
+    private void clearSoopSessions()
+    {
+        _playerUIdBySoopSession.forEach((uid, soopSession) ->
+        {
+            if (soopSession != null)
+            {
+                soopSession.disconnect();
+            }
+        });
+        _playerUIdBySoopSession.clear();
+    }
+
     @EventHandler
     public void onQuit(PlayerQuitEvent event)
     {
         Player player = event.getPlayer();
         ChzzkToken token = removeChzzkToken(player);
         ChzzkSessionManager.remove(token);
-        //TODO 이후 SOOP도 추가 필요
+        revokeSoopSession(player);
     }
 
     @Override
@@ -434,6 +617,8 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
     {
         writeChzzkJsonSettings();
         clearChzzkToken();
+
+        writeSoopJsonSettings();
     }
 
     private static final class VersionCommand extends CommandBase
@@ -524,8 +709,17 @@ public final class KsiuStreamBridge extends JavaPlugin implements Listener
             if (sb == null)
                 return true;
             sb.readChzzkProperties();
+            sb.readSoopJsonSettings();
             return true;
         }
+    }
+
+    private static final Gson prettyGson = new com.google.gson.GsonBuilder().setPrettyPrinting().create();
+
+    private static String getPrettyJson(String rawJson)
+    {
+        com.google.gson.JsonElement je = com.google.gson.JsonParser.parseString(rawJson);
+        return prettyGson.toJson(je);
     }
 
 }
