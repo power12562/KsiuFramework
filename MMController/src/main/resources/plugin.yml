@@ -1,7 +1,7 @@
 name: MMController
 version: '${version}'
 
-main: com.ksiu.mm.controller.controller
+main: com.ksiu.mm.controller.MMController
 api-version: '1.21.1'
 load: POSTWORLD
 depend: [MythicMobs]
