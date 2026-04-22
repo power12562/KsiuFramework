@@ -7,6 +7,7 @@ import io.lumine.mythic.api.skills.SkillCaster;
 import io.lumine.mythic.api.skills.SkillMetadata;
 import io.lumine.mythic.api.skills.SkillResult;
 import io.lumine.mythic.api.volatilecode.handlers.VolatileAIHandler;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.LivingEntity;
 
 public class MoveToTargetMechanic extends BaseTargetEntitySkill
@@ -23,8 +24,8 @@ public class MoveToTargetMechanic extends BaseTargetEntitySkill
         this._interval = Math.max(5, config.getLong(new String[]{"interval", "i"}, 20L));
         this._speed = Math.max(0.5, config.getDouble(new String[]{"speed", "s"}, 1.0));
 
-        _logger.info("MoveToTargetMechanic._interval: " + _interval);
-        _logger.info("MoveToTargetMechanic._speed: " + _interval);
+        // _logger.info("MoveToTargetMechanic._interval: " + _interval);
+        // _logger.info("MoveToTargetMechanic._speed: " + _speed);
     }
 
     @Override
@@ -56,8 +57,12 @@ public class MoveToTargetMechanic extends BaseTargetEntitySkill
         long targetY = Math.round(targetLocation.getY());
         long targetZ = Math.round(targetLocation.getZ());
 
-        _livingTarget.sendMessage(_livingCaster.getName() + String.format(": 당신의 위치는 [%d, %d, %d]", targetX, targetY, targetZ));
-        _aiHandler.navigateToLocation(caster, targetLocation, _speed);
+        Bukkit.getScheduler().runTask(_plugin, () ->
+        {
+            _aiHandler.navigateToLocation(caster, targetLocation, _speed);
+        });
+
+        // _livingTarget.sendMessage(_livingCaster.getName() + String.format(": 당신의 위치는 [%d, %d, %d]", targetX, targetY, targetZ));
     }
 
 }
