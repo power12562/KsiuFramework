@@ -84,9 +84,9 @@ public class MazeCommands
                 double cy = args[1].equals("~") ? location.getY() : Double.parseDouble(args[1]);
                 double cz = args[2].equals("~") ? location.getZ() : Double.parseDouble(args[2]);
 
-                int rx = Integer.parseInt(args[3]);
-                int ry = Integer.parseInt(args[4]);
-                int rz = Integer.parseInt(args[5]);
+                int width = Integer.parseInt(args[3]);
+                int height = Integer.parseInt(args[4]);
+                int length = Integer.parseInt(args[5]);
 
                 Material material = Material.matchMaterial(args[6].toUpperCase());
                 if (material == null || !material.isBlock())
@@ -96,14 +96,14 @@ public class MazeCommands
                 }
 
                 final List<Pair<Location, Material>> tasks = new ArrayList<>();
-                for (int x = -rx; x <= rx; x++)
+                for (int x = 0; x <= width; x++)
                 {
-                    for (int y = 0; y <= ry; y++)
+                    for (int y = 0; y <= height; y++)
                     {
-                        for (int z = -rz; z <= rz; z++)
+                        for (int z = 0; z <= length; z++)
                         {
                             Location targetLoc = new Location(world, cx + x, cy + y, cz + z);
-                            boolean isEdge = (Math.abs(x) == rx) || (y == 0 || y == ry) || (Math.abs(z) == rz);
+                            boolean isEdge = (x == 0 || x == width) || (y == 0 || y == height) || (z == 0 || z == length);
                             if (isEdge)
                             {
                                 tasks.add(Pair.of(targetLoc, material));
@@ -116,6 +116,7 @@ public class MazeCommands
                     }
                 }
 
+                sender.sendMessage(KsiuCore.getPrefixTextBuilder().append("미로를 생성합니다...").build());
                 _isGenerating = true;
                 new BukkitRunnable()
                 {
