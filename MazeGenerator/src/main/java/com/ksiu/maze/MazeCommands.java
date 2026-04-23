@@ -38,9 +38,13 @@ public class MazeCommands
     private static void generateMaze(List<Pair<Location, Material>> maze, World world, Material material, double cx, double cy, double cz, int width, int height, int length, int pathWidth)
             throws IllegalArgumentException
     {
-        if (width < pathWidth + 2 || length < pathWidth + 2)
+        int unit = pathWidth + 1;
+        int validWidth = ((width - 1) / unit) * unit + 1;
+        int validLength = ((length - 1) / unit) * unit + 1;
+
+        if (validWidth < unit + 1 || validLength < unit + 1)
         {
-            throw new IllegalArgumentException("공간이 너무 좁아 미로를 생성할 수 없습니다. 최소 크기: " + (pathWidth + 2));
+            throw new IllegalArgumentException("공간이 너무 좁습니다. 최소 크기: " + (unit + 1));
         }
 
         boolean[][] isWall = new boolean[width + 1][length + 1];
@@ -52,11 +56,25 @@ public class MazeCommands
             }
         }
 
-        dfsMaze(isWall, 2, 2, width - 1, length - 1, pathWidth);
+        dfsMaze(isWall, 2, 2, validWidth - 1, validLength - 1, pathWidth);
+
+        // 입구
         for (int i = 0; i < pathWidth; i++)
         {
-            isWall[2 + i][1] = false;
-            isWall[width - 1 - i][length] = false;
+            for (int z = 1; z <= 2; z++)
+            {
+                isWall[2 + i][z] = false;
+            }
+        }
+        // 출구
+        int lastGridX = ((validWidth - 1) / unit - 1) * unit + 2;
+        int lastGridZ = ((validLength - 1) / unit - 1) * unit + 2;
+        for (int i = 0; i < pathWidth; i++)
+        {
+            for (int z = lastGridZ; z <= validLength; z++)
+            {
+                isWall[lastGridX + i][z] = false;
+            }
         }
 
         for (int x = 1; x <= width; x++)
