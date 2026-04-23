@@ -1,0 +1,6 @@
+name: KsiuCore
+version: '$version'
+
+main: com.ksiu.core.KsiuCore
+api-version: '1.21.1'
+load: POSTWORLD
