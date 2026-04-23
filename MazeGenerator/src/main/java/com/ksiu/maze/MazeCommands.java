@@ -71,7 +71,7 @@ public class MazeCommands
         int lastGridZ = ((validLength - 1) / unit - 1) * unit + 2;
         for (int i = 0; i < pathWidth; i++)
         {
-            for (int z = lastGridZ; z <= validLength; z++)
+            for (int z = lastGridZ; z <= length; z++)
             {
                 isWall[lastGridX + i][z] = false;
             }
