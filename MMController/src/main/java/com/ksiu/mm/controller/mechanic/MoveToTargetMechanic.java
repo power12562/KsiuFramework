@@ -12,7 +12,6 @@ import org.bukkit.entity.LivingEntity;
 public class MoveToTargetMechanic extends BaseTargetEntitySkill
 {
     private final VolatileAIHandler _aiHandler;
-    private final long _interval;
     private final double _speed;
     private LivingEntity _livingTarget;
     private LivingEntity _livingCaster;
@@ -20,7 +19,6 @@ public class MoveToTargetMechanic extends BaseTargetEntitySkill
     public MoveToTargetMechanic(MythicLineConfig config)
     {
         this._aiHandler = _mythicBukkit.getVolatileCodeHandler().getAIHandler();
-        this._interval = Math.max(5, config.getLong(new String[]{"interval", "i"}, 20L));
         this._speed = Math.max(0.5, config.getDouble(new String[]{"speed", "s"}, 1.0));
 
         // _logger.info("MoveToTargetMechanic._interval: " + _interval);
