@@ -35,8 +35,30 @@ public class MazeCommands
         return commandList;
     }
 
-    private static void generateMaze(List<Pair<Location, Material>> maze, World world, Material material, double cx, double cy, double cz, int width, int height, int length)
+    private static void generateMaze(List<Pair<Location, Material>> maze, World world, Material material, double cx, double cy, double cz, int width, int height, int length, int pathWidth)
+            throws IllegalArgumentException
     {
+        if (width < pathWidth + 2 || length < pathWidth + 2)
+        {
+            throw new IllegalArgumentException("공간이 너무 좁아 미로를 생성할 수 없습니다. 최소 크기: " + (pathWidth + 2));
+        }
+
+        boolean[][] isWall = new boolean[width + 1][length + 1];
+        for (int x = 1; x <= width; x++)
+        {
+            for (int z = 1; z <= length; z++)
+            {
+                isWall[x][z] = true;
+            }
+        }
+
+        dfsMaze(isWall, 2, 2, width - 1, length - 1, pathWidth);
+        for (int i = 0; i < pathWidth; i++)
+        {
+            isWall[2 + i][1] = false;
+            isWall[width - 1 - i][length] = false;
+        }
+
         for (int x = 1; x <= width; x++)
         {
             for (int y = 1; y <= height; y++)
@@ -51,9 +73,61 @@ public class MazeCommands
                     }
                     else
                     {
-                        maze.add(Pair.of(targetLoc, Material.AIR));
+                        // 내부: 미로 데이터에 따라 벽(material) 혹은 길(AIR) 설치
+                        if (isWall[x][z])
+                        {
+                            maze.add(Pair.of(targetLoc, material));
+                        }
+                        else
+                        {
+                            maze.add(Pair.of(targetLoc, Material.AIR));
+                        }
                     }
                 }
+            }
+        }
+    }
+
+    private static void dfsMaze(boolean[][] isWall, int x, int z, int maxW, int maxL, int pWidth)
+    {
+        isWall[x][z] = false;
+
+        Integer[] localDirs = {0, 1, 2, 3};
+        java.util.Collections.shuffle(java.util.Arrays.asList(localDirs));
+
+        for (int dir : localDirs)
+        {
+            int move = pWidth + 1;
+            int nx = x, nz = z;
+
+            if (dir == 0)
+                nx += move;
+            else if (dir == 1)
+                nx -= move;
+            else if (dir == 2)
+                nz += move;
+            else if (dir == 3)
+                nz -= move;
+
+            if (nx > 1 && nx + pWidth - 1 <= maxW && nz > 1 && nz + pWidth - 1 <= maxL && isWall[nx][nz])
+            {
+                for (int i = 1; i <= move; i++)
+                {
+                    int ix = x + (nx - x) * i / move;
+                    int iz = z + (nz - z) * i / move;
+
+                    for (int dx = 0; dx < pWidth; dx++)
+                    {
+                        for (int dz = 0; dz < pWidth; dz++)
+                        {
+                            if (ix + dx <= maxW && iz + dz <= maxL)
+                            {
+                                isWall[ix + dx][iz + dz] = false;
+                            }
+                        }
+                    }
+                }
+                dfsMaze(isWall, nx, nz, maxW, maxL, pWidth);
             }
         }
     }
@@ -126,10 +200,10 @@ public class MazeCommands
                 return true;
             }
 
-            // 인자: /generate <x> <y> <z> <rx> <ry> <rz> <block> (총 7개)
+            // 인자: /generate <x> <y> <z> <rx> <ry> <rz> <block> [pathWidth] (총 8개)
             if (args.length < 7)
             {
-                String message = "generate <x> <y> <z> <rx> <ry> <rz> <block>";
+                String message = "generate <x> <y> <z> <rx> <ry> <rz> <block> [pathWidth]";
                 sender.sendMessage(KsiuCore.getPrefixTextBuilder().append(message).build());
                 _logger.info(message);
                 return true;
@@ -172,8 +246,9 @@ public class MazeCommands
                     return true;
                 }
 
+                int pathWidth = Integer.max(args.length >= 8 ? Integer.parseInt(args[7]) : 1, 1);
                 final List<Pair<Location, Material>> tasks = new ArrayList<>();
-                MazeCommands.generateMaze(tasks, world, material, cx, cy, cz, width, height, length);
+                MazeCommands.generateMaze(tasks, world, material, cx, cy, cz, width, height, length, pathWidth);
 
                 final String generateMessage = String.format("크기[%d], 위치[%.1f, %.1f, %.1f]에 미로를 생성합니다...", tasks.size(), cx, cy, cz);
                 sender.sendMessage(KsiuCore.getPrefixTextBuilder().append(generateMessage).build());
@@ -219,6 +294,12 @@ public class MazeCommands
                         .limit(15)
                         .collect(Collectors.toList());
             }
+
+            if (args.length == 8)
+            {
+                return Arrays.asList("1", "2", "3");
+            }
+
             return Collections.emptyList();
         }
     }
@@ -248,7 +329,7 @@ public class MazeCommands
             }
 
             // 인자: /destroy <x> <y> <z> <rx> <ry> <rz> (총 6개)
-            if (args.length < 7)
+            if (args.length < 6)
             {
                 String message = "destroy <x> <y> <z> <rx> <ry> <rz>";
                 sender.sendMessage(KsiuCore.getPrefixTextBuilder().append(message).build());
