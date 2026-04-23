@@ -20,8 +20,7 @@ public class MoveToTargetMechanic extends BaseTargetEntitySkill
     {
         this._aiHandler = _mythicBukkit.getVolatileCodeHandler().getAIHandler();
         this._speed = Math.max(0.5, config.getDouble(new String[]{"speed", "s"}, 1.0));
-
-        // _logger.info("MoveToTargetMechanic._interval: " + _interval);
+        
         // _logger.info("MoveToTargetMechanic._speed: " + _speed);
     }
 
