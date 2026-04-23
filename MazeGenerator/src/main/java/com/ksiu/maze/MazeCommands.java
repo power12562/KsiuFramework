@@ -66,22 +66,13 @@ public class MazeCommands
                 for (int z = 1; z <= length; z++)
                 {
                     Location targetLoc = new Location(world, cx + x, cy + y, cz + z);
-                    boolean isEdge = (x == 1 || x == width) || (y == 1 || y == height) || (z == 1 || z == length);
-                    if (isEdge)
+                    if (y == 1 || y == height || isWall[x][z])
                     {
                         maze.add(Pair.of(targetLoc, material));
                     }
                     else
                     {
-                        // 내부: 미로 데이터에 따라 벽(material) 혹은 길(AIR) 설치
-                        if (isWall[x][z])
-                        {
-                            maze.add(Pair.of(targetLoc, material));
-                        }
-                        else
-                        {
-                            maze.add(Pair.of(targetLoc, Material.AIR));
-                        }
+                        maze.add(Pair.of(targetLoc, Material.AIR));
                     }
                 }
             }
