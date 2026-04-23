@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class MazeCommands
@@ -30,18 +31,88 @@ public class MazeCommands
     {
         KsiuCommandList commandList = new KsiuCommandList("maze");
         commandList.put(new GenerateCommand(owner));
+        commandList.put(new DestroyCommand(owner));
         return commandList;
+    }
+
+    private static void generateMaze(List<Pair<Location, Material>> maze, World world, Material material, double cx, double cy, double cz, int width, int height, int length)
+    {
+        for (int x = 1; x <= width; x++)
+        {
+            for (int y = 1; y <= height; y++)
+            {
+                for (int z = 1; z <= length; z++)
+                {
+                    Location targetLoc = new Location(world, cx + x, cy + y, cz + z);
+                    boolean isEdge = (x == 1 || x == width) || (y == 1 || y == height) || (z == 1 || z == length);
+                    if (isEdge)
+                    {
+                        maze.add(Pair.of(targetLoc, material));
+                    }
+                    else
+                    {
+                        maze.add(Pair.of(targetLoc, Material.AIR));
+                    }
+                }
+            }
+        }
+    }
+
+    private static void destroyMaze(List<Pair<Location, Material>> maze, World world, double cx, double cy, double cz, int width, int height, int length)
+    {
+        for (int x = 1; x <= width; x++)
+        {
+            for (int y = 1; y <= height; y++)
+            {
+                for (int z = 1; z <= length; z++)
+                {
+                    Location targetLoc = new Location(world, cx + x, cy + y, cz + z);
+                    maze.add(Pair.of(targetLoc, Material.AIR));
+                }
+            }
+        }
+    }
+
+    private static void BlocksRunnable(List<Pair<Location, Material>> blocks, JavaPlugin plugin, Runnable complete) throws IllegalArgumentException, IllegalStateException
+    {
+        new BukkitRunnable()
+        {
+            private int index = 0;
+            private final int total = blocks.size();
+
+            @Override
+            public void run()
+            {
+                long startTime = System.currentTimeMillis();
+                while (index < total && (System.currentTimeMillis() - startTime) < 5)
+                {
+                    for (int i = 0; i < 2000 && index < total; i++)
+                    {
+                        Pair<Location, Material> pair = blocks.get(index++);
+                        pair.first().getBlock().setType(pair.second());
+                    }
+                }
+
+                if (index >= total)
+                {
+                    complete.run();
+                    this.cancel();
+                }
+            }
+        }.runTaskTimer(plugin, 0L, 1L);
     }
 
     public static class GenerateCommand extends CommandBase
     {
         private final JavaPlugin _owner;
+        private final Logger _logger;
         private volatile boolean _isGenerating = false;
 
         public GenerateCommand(JavaPlugin owner)
         {
             super("generate", "미로를 생성합니다.");
             _owner = owner;
+            _logger = _owner.getLogger();
         }
 
         @Override
@@ -49,14 +120,18 @@ public class MazeCommands
         {
             if (_isGenerating)
             {
-                sender.sendMessage(KsiuCore.getPrefixTextBuilder().append("이미 다른 생성 작업이 진행 중입니다. 잠시만 기다려주세요.").build());
+                String message = "이미 다른 생성 작업이 진행 중입니다. 잠시만 기다려주세요.";
+                sender.sendMessage(KsiuCore.getPrefixTextBuilder().append(message).build());
+                _logger.info(message);
                 return true;
             }
 
             // 인자: /generate <x> <y> <z> <rx> <ry> <rz> <block> (총 7개)
             if (args.length < 7)
             {
-                sender.sendMessage(KsiuCore.getPrefixTextBuilder().append(": generate <x> <y> <z> <rx> <ry> <rz> <block>").build());
+                String message = "generate <x> <y> <z> <rx> <ry> <rz> <block>";
+                sender.sendMessage(KsiuCore.getPrefixTextBuilder().append(message).build());
+                _logger.info(message);
                 return true;
             }
 
@@ -91,69 +166,40 @@ public class MazeCommands
                 Material material = Material.matchMaterial(args[6].toUpperCase());
                 if (material == null || !material.isBlock())
                 {
-                    sender.sendMessage(KsiuCore.getPrefixTextBuilder().append("존재하지 않거나 설치 불가능한 블록입니다." + args[6]).build());
+                    final String message = "존재하지 않거나 설치 불가능한 블록입니다." + args[6];
+                    sender.sendMessage(KsiuCore.getPrefixTextBuilder().append(message).build());
+                    _logger.info(message);
                     return true;
                 }
 
                 final List<Pair<Location, Material>> tasks = new ArrayList<>();
-                for (int x = 0; x <= width; x++)
-                {
-                    for (int y = 0; y <= height; y++)
-                    {
-                        for (int z = 0; z <= length; z++)
-                        {
-                            Location targetLoc = new Location(world, cx + x, cy + y, cz + z);
-                            boolean isEdge = (x == 0 || x == width) || (y == 0 || y == height) || (z == 0 || z == length);
-                            if (isEdge)
-                            {
-                                tasks.add(Pair.of(targetLoc, material));
-                            }
-                            else
-                            {
-                                tasks.add(Pair.of(targetLoc, Material.AIR));
-                            }
-                        }
-                    }
-                }
+                MazeCommands.generateMaze(tasks, world, material, cx, cy, cz, width, height, length);
 
-                sender.sendMessage(KsiuCore.getPrefixTextBuilder().append("미로를 생성합니다...").build());
+                final String generateMessage = String.format("크기[%d], 위치[%.1f, %.1f, %.1f]에 미로를 생성합니다...", tasks.size(), cx, cy, cz);
+                sender.sendMessage(KsiuCore.getPrefixTextBuilder().append(generateMessage).build());
+                _logger.info(generateMessage);
                 _isGenerating = true;
-                new BukkitRunnable()
+                BlocksRunnable(tasks, _owner, () ->
                 {
-                    private int index = 0;
-                    private final int total = tasks.size();
-
-                    @Override
-                    public void run()
-                    {
-                        long startTime = System.currentTimeMillis();
-                        while (index < total && (System.currentTimeMillis() - startTime) < 5)
-                        {
-                            for (int i = 0; i < 2000 && index < total; i++)
-                            {
-                                Pair<Location, Material> pair = tasks.get(index++);
-                                pair.first().getBlock().setType(pair.second());
-                            }
-                        }
-
-                        if (index >= total)
-                        {
-                            sender.sendMessage(KsiuCore.getPrefixTextBuilder().append("미로 생성 완료!").build());
-                            _isGenerating = false;
-                            this.cancel();
-                        }
-                    }
-                }.runTaskTimer(_owner, 0L, 1L);
+                    String message = "미로 생성 완료!";
+                    sender.sendMessage(KsiuCore.getPrefixTextBuilder().append(message).build());
+                    _logger.info(message);
+                    _isGenerating = false;
+                });
             }
             catch (NumberFormatException e)
             {
                 _isGenerating = false;
-                sender.sendMessage(KsiuCore.getErrorTextBuilder().append("좌표와 지름은 숫자여야 합니다.").build());
+                String message = "좌표와 지름은 숫자여야 합니다.";
+                sender.sendMessage(KsiuCore.getErrorTextBuilder().append(message).build());
+                _logger.warning(message);
             }
             catch (Exception e)
             {
                 _isGenerating = false;
-                sender.sendMessage(KsiuCore.getErrorTextBuilder().append(e.toString()).build());
+                String message = e.toString();
+                sender.sendMessage(KsiuCore.getErrorTextBuilder().append(message).build());
+                _logger.warning(message);
             }
             return true;
         }
@@ -175,6 +221,111 @@ public class MazeCommands
             }
             return Collections.emptyList();
         }
+    }
+
+    public static class DestroyCommand extends CommandBase
+    {
+        private final JavaPlugin _owner;
+        private final Logger _logger;
+        private volatile boolean _isGenerating = false;
+
+        public DestroyCommand(JavaPlugin owner)
+        {
+            super("destroy", "미로를 파괴합니다.");
+            _owner = owner;
+            _logger = _owner.getLogger();
+        }
+
+        @Override
+        public boolean onCommand(CommandSender sender, String[] args)
+        {
+            if (_isGenerating)
+            {
+                String message = "이미 다른 생성 작업이 진행 중입니다. 잠시만 기다려주세요.";
+                sender.sendMessage(KsiuCore.getPrefixTextBuilder().append(message).build());
+                _logger.info(message);
+                return true;
+            }
+
+            // 인자: /destroy <x> <y> <z> <rx> <ry> <rz> (총 6개)
+            if (args.length < 7)
+            {
+                String message = "destroy <x> <y> <z> <rx> <ry> <rz>";
+                sender.sendMessage(KsiuCore.getPrefixTextBuilder().append(message).build());
+                _logger.info(message);
+                return true;
+            }
+
+            try
+            {
+                World world;
+                Location location;
+                if (sender instanceof Entity entity)
+                {
+                    world = entity.getWorld();
+                    location = entity.getLocation();
+                }
+                else if (sender instanceof BlockCommandSender blockSender)
+                {
+                    Block block = blockSender.getBlock();
+                    world = block.getWorld();
+                    location = block.getLocation();
+                }
+                else
+                {
+                    return true;
+                }
+
+                double cx = args[0].equals("~") ? location.getX() : Double.parseDouble(args[0]);
+                double cy = args[1].equals("~") ? location.getY() : Double.parseDouble(args[1]);
+                double cz = args[2].equals("~") ? location.getZ() : Double.parseDouble(args[2]);
+
+                int width = Integer.parseInt(args[3]);
+                int height = Integer.parseInt(args[4]);
+                int length = Integer.parseInt(args[5]);
+
+                final List<Pair<Location, Material>> tasks = new ArrayList<>();
+                MazeCommands.destroyMaze(tasks, world, cx, cy, cz, width, height, length);
+                MazeCommands.BlocksRunnable(tasks, _owner, () ->
+                {
+                    String message = "미로 파괴 완료!";
+                    sender.sendMessage(KsiuCore.getPrefixTextBuilder().append(message).build());
+                    _logger.info(message);
+                    _isGenerating = false;
+                });
+
+                final String destroyMessage = String.format("크기[%d], 위치[%.1f, %.1f, %.1f]에 미로를 파괴합니다...", tasks.size(), cx, cy, cz);
+                sender.sendMessage(KsiuCore.getPrefixTextBuilder().append(destroyMessage).build());
+                _logger.info(destroyMessage);
+                _isGenerating = true;
+            }
+            catch (NumberFormatException e)
+            {
+                _isGenerating = false;
+                String message = "좌표와 지름은 숫자여야 합니다.";
+                sender.sendMessage(KsiuCore.getErrorTextBuilder().append(message).build());
+                _logger.warning(message);
+            }
+            catch (Exception e)
+            {
+                _isGenerating = false;
+                String message = e.toString();
+                sender.sendMessage(KsiuCore.getErrorTextBuilder().append(message).build());
+                _logger.warning(message);
+            }
+            return true;
+        }
+
+        @Override
+        public List<String> onTabComplete(CommandSender sender, String[] args)
+        {
+            if (args.length >= 1 && args.length <= 3)
+                return Collections.singletonList("~");
+
+            return Collections.emptyList();
+        }
+
+
     }
 
 }
