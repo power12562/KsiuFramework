@@ -1,0 +1,6 @@
+name: MazeGenerator
+version: '${version}'
+
+main: com.ksiu.maze.MazeGenerator
+api-version: '1.21.1'
+load: POSTWORLD
