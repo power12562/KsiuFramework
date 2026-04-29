@@ -4,7 +4,9 @@ import com.ksiu.core.builders.TextComponentBuilder;
 import com.ksiu.core.commands.KsiuCommandRouter;
 import com.ksiu.core.commands.KsiuSystemCommand;
 import net.kyori.adventure.text.format.NamedTextColor;
+import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandMap;
+import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.BufferedReader;
@@ -15,7 +17,6 @@ import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -127,5 +128,14 @@ public final class KsiuCore extends JavaPlugin
     public static TextComponentBuilder getErrorTextBuilder()
     {
         return TextComponentBuilder.newBuilder().content("[Ksiu:Error] ").color(NamedTextColor.RED);
+    }
+
+    public static void registerCommand(JavaPlugin plugin, String name, CommandExecutor executor)
+    {
+        PluginCommand cmd = plugin.getCommand(name);
+        if (cmd != null)
+        {
+            cmd.setExecutor(executor);
+        }
     }
 }
