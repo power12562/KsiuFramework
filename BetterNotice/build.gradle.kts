@@ -12,7 +12,7 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
     compileOnly("io.github.toxicity188:BetterHud-standard-api:1.14.1")
     compileOnly("io.github.toxicity188:BetterHud-bukkit-api:1.14.1")
-    compileOnly("io.github.toxicity188:BetterCommand:1.14.1")
+    compileOnly("io.github.toxicity188:BetterCommand:1.4.3")
 }
 
 java {
