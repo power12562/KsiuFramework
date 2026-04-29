@@ -1,0 +1,7 @@
+name: BetterNotice
+version: '${version}'
+
+main: com.ksiu.better.BetterNotice
+api-version: '1.21.1'
+load: POSTWORLD
+depend: [BetterHud]
