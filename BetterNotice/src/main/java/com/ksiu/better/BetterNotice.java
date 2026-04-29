@@ -56,8 +56,8 @@ public final class BetterNotice extends JavaPlugin
 
     void readSettings()
     {
-        final String settings = "settings";
-        Properties properties = readProperties(settings);
+        final String config = "config";
+        Properties properties = readProperties(config);
         _noticePopupName = properties.getProperty("notice-popup-name");
         if (_noticePopupName == null)
         {
@@ -65,7 +65,7 @@ public final class BetterNotice extends JavaPlugin
             properties.put("notice-popup-name", _noticePopupName);
             try
             {
-                writeProperties(settings, properties);
+                writeProperties(config, properties);
             }
             catch (IOException e)
             {
