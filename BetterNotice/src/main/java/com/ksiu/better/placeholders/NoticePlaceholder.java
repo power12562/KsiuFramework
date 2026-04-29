@@ -42,6 +42,12 @@ public class NoticePlaceholder implements HudPlaceholder<String>, CommandExecuto
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NonNull @NotNull String[] args)
     {
+        if (!sender.isOp())
+        {
+            sender.sendMessage("이 명령어를 사용할 권한이 없습니다.");
+            return true;
+        }
+
         if (args.length == 0)
         {
             sender.sendMessage("/공지 [내용]");
@@ -59,6 +65,7 @@ public class NoticePlaceholder implements HudPlaceholder<String>, CommandExecuto
             _notice = String.join(" ", args);
             Bukkit.dispatchCommand(console, String.format("hud popup show all %s", _noticePopupName));
         }
+
         return true;
     }
 
