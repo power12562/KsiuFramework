@@ -4,7 +4,10 @@ import kr.toxicity.hud.api.placeholder.HudPlaceholder;
 import kr.toxicity.hud.api.player.HudPlayer;
 import kr.toxicity.hud.api.update.UpdateEvent;
 import org.bukkit.Bukkit;
-import org.bukkit.command.*;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
@@ -55,15 +58,14 @@ public class NoticePlaceholder implements HudPlaceholder<String>, CommandExecuto
         }
 
         String notice = args[0];
-        ConsoleCommandSender console = Bukkit.getConsoleSender();
         if (args.length == 1 && notice.equals("숨기기"))
         {
-            Bukkit.dispatchCommand(console, String.format("hud popup hide all %s", NoticePopupName));
+            Bukkit.dispatchCommand(sender, String.format("hud popup hide all %s", NoticePopupName));
         }
         else
         {
             _notice = String.join(" ", args);
-            Bukkit.dispatchCommand(console, String.format("hud popup show all %s", NoticePopupName));
+            Bukkit.dispatchCommand(sender, String.format("hud popup show all %s", NoticePopupName));
         }
 
         return true;
