@@ -7,6 +7,11 @@ load: POSTWORLD
 depend: [BetterHud]
 
 commands:
+  bnreload:
+    description: "betterNotice의 설정 파일을 재로드합니다."
+    usage: "/bnreload"
+
   공지:
     description: "공지 팝업을 출력합니다."
     usage: "/공지 [내용]"
+
