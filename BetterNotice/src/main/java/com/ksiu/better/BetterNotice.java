@@ -11,7 +11,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.command.*;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
@@ -41,7 +40,7 @@ public final class BetterNotice extends JavaPlugin
     private String _noticeLine2 = "";
     private String _noticeLine3 = "";
 
-    private BukkitTask _noticeTask;
+    private BukkitRunnable _noticeRunnable;
 
     @Override
     public void onEnable()
@@ -104,9 +103,9 @@ public final class BetterNotice extends JavaPlugin
     public void onDisable()
     {
         // Plugin shutdown logic
-        if (_noticeTask != null)
+        if (_noticeRunnable != null)
         {
-            _noticeTask.cancel();
+            _noticeRunnable.cancel();
         }
     }
 
@@ -164,9 +163,9 @@ public final class BetterNotice extends JavaPlugin
     public void putNotice(String notice)
     {
         _noticeQueue.offer(notice);
-        if (_noticeTask == null)
+        if (_noticeRunnable == null)
         {
-            _noticeTask = new BukkitRunnable()
+            _noticeRunnable = new BukkitRunnable()
             {
                 @Override
                 public void run()
@@ -199,15 +198,17 @@ public final class BetterNotice extends JavaPlugin
                 @Override
                 public void cancel()
                 {
+                    getLogger().info("Notice Task End.");
                     _noticeLine1 = "";
                     _noticeLine2 = "";
                     _noticeLine3 = "";
-                    _noticeTask = null;
+                    _noticeRunnable = null;
                     _noticeQueue.clear();
                     super.cancel();
                 }
 
-            }.runTaskTimer(this, 0L, _noticeDuration);
+            };
+            _noticeRunnable.runTaskTimer(this, 0L, _noticeDuration);
         }
     }
 
@@ -305,9 +306,9 @@ public final class BetterNotice extends JavaPlugin
             String notice0 = args[0];
             if (args.length == 1 && notice0.equals("숨기기"))
             {
-                if (_noticeTask != null)
+                if (_noticeRunnable != null)
                 {
-                    _noticeTask.cancel();
+                    _noticeRunnable.cancel();
                 }
                 Bukkit.dispatchCommand(sender, String.format("hud popup hide all %s", NoticePopupName));
             }
