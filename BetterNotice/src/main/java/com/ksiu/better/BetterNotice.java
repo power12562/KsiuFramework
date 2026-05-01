@@ -1,16 +1,20 @@
 package com.ksiu.better;
 
-import com.ksiu.better.placeholders.NoticePlaceholder;
 import kr.toxicity.hud.api.BetterHud;
 import kr.toxicity.hud.api.BetterHudAPI;
 import kr.toxicity.hud.api.manager.PlaceholderManager;
+import kr.toxicity.hud.api.placeholder.HudPlaceholder;
 import kr.toxicity.hud.api.placeholder.PlaceholderContainer;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.PluginCommand;
+import kr.toxicity.hud.api.player.HudPlayer;
+import kr.toxicity.hud.api.update.UpdateEvent;
+import org.bukkit.Bukkit;
+import org.bukkit.command.*;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 import org.jspecify.annotations.NonNull;
 
 import java.io.BufferedReader;
@@ -20,33 +24,90 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Properties;
+import java.util.*;
+import java.util.function.Function;
 
 public final class BetterNotice extends JavaPlugin
 {
-    private NoticePlaceholder _noticePlaceholder;
+    private NoticeCommand _noticeCommand;
+
     private String _noticePopupName;
+    private long _noticeDuration = 1;
+    private int _noticeLine1Len = 0;
+    private int _noticeLine2Len = 0;
+
+    private final Queue<String> _noticeQueue = new ArrayDeque<>();
+    private String _noticeLine1 = "";
+    private String _noticeLine2 = "";
+    private String _noticeLine3 = "";
+
+    private BukkitTask _noticeTask;
 
     @Override
     public void onEnable()
     {
         // Plugin startup logic
-        readSettings();
+        readConfig();
         BetterHud betterHud = BetterHudAPI.inst();
         PlaceholderManager placeholders = betterHud.getPlaceholderManager();
         PlaceholderContainer<String> stringContainer = placeholders.getStringContainer();
 
-        _noticePlaceholder = new NoticePlaceholder(_noticePopupName);
-        stringContainer.addPlaceholder("better_notice", _noticePlaceholder);
-        registerCommand(this, "공지", _noticePlaceholder);
-        registerCommand(this, "bnreload", new bnreloadCommand(this));
+        stringContainer.addPlaceholder("better_notice_line1", new HudPlaceholder<String>()
+        {
+            @Override
+            public @NotNull Function<HudPlayer, String> invoke(@NotNull @Unmodifiable List<String> args, @NotNull UpdateEvent reason)
+            {
+                return hudPlayer -> _noticeLine1;
+            }
+
+            @Override
+            public int getRequiredArgsLength()
+            {
+                return 0;
+            }
+        });
+        stringContainer.addPlaceholder("better_notice_line2", new HudPlaceholder<String>()
+        {
+            @Override
+            public @NotNull Function<HudPlayer, String> invoke(@NotNull @Unmodifiable List<String> args, @NotNull UpdateEvent reason)
+            {
+                return hudPlayer -> _noticeLine2;
+            }
+
+            @Override
+            public int getRequiredArgsLength()
+            {
+                return 0;
+            }
+        });
+        stringContainer.addPlaceholder("better_notice_line3", new HudPlaceholder<String>()
+        {
+            @Override
+            public @NotNull Function<HudPlayer, String> invoke(@NotNull @Unmodifiable List<String> args, @NotNull UpdateEvent reason)
+            {
+                return hudPlayer -> _noticeLine3;
+            }
+
+            @Override
+            public int getRequiredArgsLength()
+            {
+                return 0;
+            }
+        });
+
+        _noticeCommand = new NoticeCommand(_noticePopupName);
+        registerCommand(this, "공지", _noticeCommand);
+        registerCommand(this, "bnreload", new bnreloadCommand());
     }
 
     @Override
     public void onDisable()
     {
         // Plugin shutdown logic
-
+        if (_noticeTask != null)
+        {
+            _noticeTask.cancel();
+        }
     }
 
     String getNoticePopupName()
@@ -54,7 +115,7 @@ public final class BetterNotice extends JavaPlugin
         return _noticePopupName;
     }
 
-    void readSettings()
+    private void readConfig()
     {
         final String config = "config";
         Properties properties = readProperties(config);
@@ -63,22 +124,95 @@ public final class BetterNotice extends JavaPlugin
         {
             _noticePopupName = "notice_popup";
             properties.put("notice-popup-name", _noticePopupName);
-            try
-            {
-                writeProperties(config, properties);
-            }
-            catch (IOException e)
-            {
-                getLogger().warning(e.toString());
-            }
+        }
+        if (_noticeCommand != null)
+        {
+            _noticeCommand.NoticePopupName = _noticePopupName;
         }
 
-        if (_noticePlaceholder != null)
+        try
         {
-            _noticePlaceholder.NoticePopupName = _noticePopupName;
+            _noticeDuration = Long.parseLong(properties.getProperty("notice-duration"));
+            _noticeDuration = Long.max(_noticeDuration, 20L);
+        }
+        catch (Exception e)
+        {
+            _noticeDuration = 200;
+            properties.put("notice-duration", _noticeDuration);
+        }
+
+        try
+        {
+            _noticeLine1Len = Integer.parseInt(properties.getProperty("notice-line1-length"));
+            _noticeLine2Len = Integer.parseInt(properties.getProperty("notice-line2-length"));
+        }
+        catch (Exception e)
+        {
+            _noticeLine1Len = 0;
+            _noticeLine2Len = 0;
+            properties.put("notice-line1-length", _noticeLine1Len);
+            properties.put("notice-line2-length", _noticeLine2Len);
+        }
+
+        try
+        {
+            writeProperties(config, properties);
+        }
+        catch (IOException e)
+        {
+            getLogger().warning(e.toString());
         }
     }
 
+    public void putNotice(String notice)
+    {
+        _noticeQueue.offer(notice);
+        if (_noticeTask == null)
+        {
+            _noticeTask = new BukkitRunnable()
+            {
+                @Override
+                public void run()
+                {
+                    String notice = _noticeQueue.poll();
+                    if (notice == null)
+                    {
+                        cancel();
+                        return;
+                    }
+
+                    int noticeLen = notice.length();
+                    _noticeLine1 = "";
+                    _noticeLine2 = "";
+                    _noticeLine3 = "";
+                    if (_noticeLine1Len <= 0 || noticeLen <= _noticeLine1Len)
+                    {
+                        _noticeLine1 = notice;
+                    }
+                    else if (_noticeLine2Len <= 0 || noticeLen <= _noticeLine2Len)
+                    {
+                        _noticeLine2 = notice;
+                    }
+                    else
+                    {
+                        _noticeLine3 = notice;
+                    }
+                }
+
+                @Override
+                public void cancel()
+                {
+                    _noticeLine1 = "";
+                    _noticeLine2 = "";
+                    _noticeLine3 = "";
+                    _noticeTask = null;
+                    _noticeQueue.clear();
+                    super.cancel();
+                }
+
+            }.runTaskTimer(this, 0L, _noticeDuration);
+        }
+    }
 
     public static void registerCommand(JavaPlugin plugin, String name, CommandExecutor executor)
     {
@@ -129,13 +263,30 @@ public final class BetterNotice extends JavaPlugin
         }
     }
 
-    private static class bnreloadCommand implements CommandExecutor
+    private class bnreloadCommand implements CommandExecutor
     {
-        private final BetterNotice _betterNotice;
-
-        public bnreloadCommand(BetterNotice betterNotice)
+        @Override
+        public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NonNull @NotNull String[] args)
         {
-            _betterNotice = betterNotice;
+            if (!sender.isOp())
+            {
+                sender.sendMessage("이 명령어를 사용할 권한이 없습니다.");
+                return true;
+            }
+
+            readConfig();
+            sender.sendMessage("공지 팝업: " + getNoticePopupName());
+            return true;
+        }
+    }
+
+    private class NoticeCommand implements CommandExecutor, TabCompleter
+    {
+        public String NoticePopupName;
+
+        public NoticeCommand(String noticePopupName)
+        {
+            NoticePopupName = noticePopupName;
         }
 
         @Override
@@ -147,9 +298,47 @@ public final class BetterNotice extends JavaPlugin
                 return true;
             }
 
-            _betterNotice.readSettings();
-            sender.sendMessage("공지 팝업: " + _betterNotice.getNoticePopupName());
+            if (args.length == 0)
+            {
+                sender.sendMessage("/공지 [내용]");
+                return true;
+            }
+
+            String notice0 = args[0];
+            if (args.length == 1 && notice0.equals("숨기기"))
+            {
+                Bukkit.dispatchCommand(sender, String.format("hud popup hide all %s", NoticePopupName));
+                if (_noticeTask != null)
+                {
+                    _noticeTask.cancel();
+                }
+            }
+            else
+            {
+                String notice = String.join(" ", args);
+                putNotice(notice);
+                Bukkit.dispatchCommand(sender, String.format("hud popup show all %s", NoticePopupName));
+            }
+
             return true;
         }
+
+        @Override
+        public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NonNull @NotNull String[] args)
+        {
+            if (args.length == 1)
+            {
+                String input = args[0].toLowerCase();
+                List<String> completions = new ArrayList<>();
+                if ("숨기기".startsWith(input))
+                {
+                    completions.add("숨기기");
+                }
+                return completions;
+            }
+
+            return List.of();
+        }
     }
+
 }
