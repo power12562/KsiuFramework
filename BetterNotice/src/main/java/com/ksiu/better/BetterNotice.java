@@ -138,7 +138,7 @@ public final class BetterNotice extends JavaPlugin
         catch (Exception e)
         {
             _noticeDuration = 200;
-            properties.put("notice-duration", _noticeDuration);
+            properties.put("notice-duration", String.valueOf(_noticeDuration));
         }
 
         try
@@ -150,8 +150,8 @@ public final class BetterNotice extends JavaPlugin
         {
             _noticeLine1Len = 0;
             _noticeLine2Len = 0;
-            properties.put("notice-line1-length", _noticeLine1Len);
-            properties.put("notice-line2-length", _noticeLine2Len);
+            properties.put("notice-line1-length", String.valueOf(_noticeLine1Len));
+            properties.put("notice-line2-length", String.valueOf(_noticeLine2Len));
         }
 
         try
