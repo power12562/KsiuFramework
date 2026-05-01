@@ -139,7 +139,9 @@ public final class BetterNotice extends JavaPlugin
         try
         {
             _noticeLine1Len = Integer.parseInt(properties.getProperty("notice-line1-length"));
+            _noticeLine1Len = Integer.max(_noticeLine1Len, 0);
             _noticeLine2Len = Integer.parseInt(properties.getProperty("notice-line2-length"));
+            _noticeLine2Len = Integer.max(_noticeLine2Len, 0);
         }
         catch (Exception e)
         {
@@ -303,11 +305,11 @@ public final class BetterNotice extends JavaPlugin
             String notice0 = args[0];
             if (args.length == 1 && notice0.equals("숨기기"))
             {
-                Bukkit.dispatchCommand(sender, String.format("hud popup hide all %s", NoticePopupName));
                 if (_noticeTask != null)
                 {
                     _noticeTask.cancel();
                 }
+                Bukkit.dispatchCommand(sender, String.format("hud popup hide all %s", NoticePopupName));
             }
             else
             {
