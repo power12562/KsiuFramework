@@ -110,11 +110,6 @@ public final class BetterNotice extends JavaPlugin
         }
     }
 
-    String getNoticePopupName()
-    {
-        return _noticePopupName;
-    }
-
     private void readConfig()
     {
         final String config = "config";
@@ -275,7 +270,8 @@ public final class BetterNotice extends JavaPlugin
             }
 
             readConfig();
-            sender.sendMessage("공지 팝업: " + getNoticePopupName());
+            sender.sendMessage("공지 팝업 이름: " + _noticePopupName);
+            sender.sendMessage("공지 지속 시간: " + _noticeDuration);
             return true;
         }
     }
