@@ -55,7 +55,7 @@ public final class BetterNotice extends JavaPlugin
         PlaceholderManager placeholders = betterHud.getPlaceholderManager();
         PlaceholderContainer<String> stringContainer = placeholders.getStringContainer();
 
-        stringContainer.addPlaceholder("better_notice_line1", new HudPlaceholder<String>()
+        stringContainer.addPlaceholder("better_notice_line1", new HudPlaceholder<>()
         {
             @Override
             public @NotNull Function<HudPlayer, String> invoke(@NotNull @Unmodifiable List<String> args, @NotNull UpdateEvent reason)
@@ -69,7 +69,7 @@ public final class BetterNotice extends JavaPlugin
                 return 0;
             }
         });
-        stringContainer.addPlaceholder("better_notice_line2", new HudPlaceholder<String>()
+        stringContainer.addPlaceholder("better_notice_line2", new HudPlaceholder<>()
         {
             @Override
             public @NotNull Function<HudPlayer, String> invoke(@NotNull @Unmodifiable List<String> args, @NotNull UpdateEvent reason)
@@ -83,7 +83,7 @@ public final class BetterNotice extends JavaPlugin
                 return 0;
             }
         });
-        stringContainer.addPlaceholder("better_notice_line3", new HudPlaceholder<String>()
+        stringContainer.addPlaceholder("better_notice_line3", new HudPlaceholder<>()
         {
             @Override
             public @NotNull Function<HudPlayer, String> invoke(@NotNull @Unmodifiable List<String> args, @NotNull UpdateEvent reason)
