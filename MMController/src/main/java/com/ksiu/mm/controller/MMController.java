@@ -1,7 +1,8 @@
 package com.ksiu.mm.controller;
 
 import com.ksiu.mm.controller.mechanic.MoveToTargetMechanic;
-import com.ksiu.mm.controller.mechanic.TestMechanic;import io.lumine.mythic.bukkit.events.MythicMechanicLoadEvent;
+import com.ksiu.mm.controller.mechanic.TestMechanic;
+import io.lumine.mythic.bukkit.events.MythicMechanicLoadEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -12,6 +13,7 @@ import java.util.logging.Logger;
 public final class MMController extends JavaPlugin implements Listener
 {
     private static Logger logger;
+
     public static Logger getPluginLogger()
     {
         return logger;
