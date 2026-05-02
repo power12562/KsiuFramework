@@ -1,5 +1,6 @@
 package com.ksiu.better;
 
+import com.ksiu.better.mm.MMNotice;
 import kr.toxicity.hud.api.BetterHud;
 import kr.toxicity.hud.api.BetterHudAPI;
 import kr.toxicity.hud.api.manager.PlaceholderManager;
@@ -97,6 +98,13 @@ public final class BetterNotice extends JavaPlugin
         _noticeCommand = new NoticeCommand(_noticePopupName);
         registerCommand(this, "공지", _noticeCommand);
         registerCommand(this, "bnreload", new bnreloadCommand());
+
+        // MythicMobs 확인
+        if (isPluginEnabled("MythicMobs"))
+        {
+            MMNotice.initialize(this);
+            getLogger().info("MMNotice enabled");
+        }
     }
 
     @Override
@@ -338,6 +346,11 @@ public final class BetterNotice extends JavaPlugin
 
             return List.of();
         }
+    }
+
+    public static boolean isPluginEnabled(String pluginName)
+    {
+        return Bukkit.getPluginManager().isPluginEnabled(pluginName);
     }
 
 }

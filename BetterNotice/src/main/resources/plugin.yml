@@ -5,6 +5,7 @@ main: com.ksiu.better.BetterNotice
 api-version: '1.21.1'
 load: POSTWORLD
 depend: [BetterHud]
+softdepend: [MythicMobs]
 
 commands:
   bnreload:
@@ -14,4 +15,3 @@ commands:
   공지:
     description: "공지 팝업을 출력합니다."
     usage: "/공지 [내용]"
-

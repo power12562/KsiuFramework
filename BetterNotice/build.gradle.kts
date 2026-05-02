@@ -6,6 +6,7 @@ plugins {
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://mvn.lumine.io/repository/maven-public/")
 }
 
 dependencies {
@@ -13,6 +14,7 @@ dependencies {
     compileOnly("io.github.toxicity188:BetterHud-standard-api:1.14.1")
     compileOnly("io.github.toxicity188:BetterHud-bukkit-api:1.14.1")
     compileOnly("io.github.toxicity188:BetterCommand:1.4.3")
+    compileOnly("io.lumine:Mythic-Dist:5.6.1")
 }
 
 java {
