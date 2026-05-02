@@ -8,6 +8,9 @@ import kr.toxicity.hud.api.placeholder.HudPlaceholder;
 import kr.toxicity.hud.api.placeholder.PlaceholderContainer;
 import kr.toxicity.hud.api.player.HudPlayer;
 import kr.toxicity.hud.api.update.UpdateEvent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.command.*;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -185,15 +188,46 @@ public final class BetterNotice extends JavaPlugin
                         return;
                     }
 
-                    int noticeLen = notice.length();
+                    Component noticeComponent = MiniMessage.miniMessage().deserialize(notice);
+                    String plainNotice = PlainTextComponentSerializer.plainText().serialize(noticeComponent);
+                    double totalWeight = 0;
+                    for (char c : plainNotice.toCharArray())
+                    {
+                        if (c >= '가' && c <= '힣')
+                        {
+                            // 한글
+                            totalWeight += 1.0;
+                        }
+                        else if (Character.isUpperCase(c) || c == 'W' || c == 'M')
+                        {
+                            // 대문자 및 넓은 영문
+                            totalWeight += 0.7;
+                        }
+                        else if ("il!.,:;|'".indexOf(c) != -1)
+                        {
+                            // 아주 좁은 문자
+                            totalWeight += 0.3;
+                        }
+                        else if (c == ' ')
+                        {
+                            // 공백
+                            totalWeight += 0.4;
+                        }
+                        else
+                        {
+                            // 일반 소문자 및 기타
+                            totalWeight += 0.5;
+                        }
+                    }
+
                     _noticeLine1 = "";
                     _noticeLine2 = "";
                     _noticeLine3 = "";
-                    if (_noticeLine1Len <= 0 || noticeLen <= _noticeLine1Len)
+                    if (_noticeLine1Len <= 0 || totalWeight <= _noticeLine1Len)
                     {
                         _noticeLine1 = notice;
                     }
-                    else if (_noticeLine2Len <= 0 || noticeLen <= _noticeLine2Len)
+                    else if (_noticeLine2Len <= 0 || totalWeight <= _noticeLine2Len)
                     {
                         _noticeLine2 = notice;
                     }
