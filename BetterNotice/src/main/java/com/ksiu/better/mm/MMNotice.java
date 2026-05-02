@@ -1,7 +1,7 @@
 package com.ksiu.better.mm;
 
 import com.ksiu.better.BetterNotice;
-import com.ksiu.better.mm.mechanic.MobSpawnNoticeMechanic;
+import com.ksiu.better.mm.mechanic.BetterNoticeMechanic;
 import io.lumine.mythic.bukkit.events.MythicMechanicLoadEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
@@ -23,21 +23,23 @@ public class MMNotice implements Listener
         instance = new MMNotice(plugin);
     }
 
+    private final BetterNotice _plugin;
     private final Logger _logger;
 
     private MMNotice(BetterNotice plugin)
     {
-        _logger = plugin.getLogger();
+        _plugin = plugin;
+        _logger = _plugin.getLogger();
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
     @EventHandler
     public void onMythicMechanicLoad(MythicMechanicLoadEvent event)
     {
-        if (event.getMechanicName().equalsIgnoreCase("MobSpawnNotice"))
+        if (event.getMechanicName().equalsIgnoreCase("betterNotice"))
         {
-            event.register(new MobSpawnNoticeMechanic(event.getConfig()));
-            _logger.info("Registered Mechanic: MobSpawnNoticeMechanic");
+            event.register(new BetterNoticeMechanic(_plugin, event.getConfig()));
+            _logger.info("Registered Mechanic: BetterNoticeMechanic");
         }
     }
 
